@@ -1,4 +1,47 @@
+import { useEffect, useState } from "react";
+import {getDashboardStats,getCitizensCount,} from "../services/complaintsService";
+
 export default function DashboardPage() {
+  const [stats, setStats] = useState({
+    newCount: 0,
+    inProgressCount: 0,
+    resolvedCount: 0,
+  });
+
+  const [citizensCount, setCitizensCount] = useState(0);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    const data = await getDashboardStats();
+    setStats(data);
+
+      const citizens = await getCitizensCount();
+    setCitizensCount(citizens);
+  };
+
+
+  const cards = [
+    {
+      title: "Sesizări Noi",
+      value: stats.newCount,
+    },
+    {
+      title: "În Lucru",
+      value: stats.inProgressCount,
+    },
+    {
+      title: "Rezolvate",
+      value: stats.resolvedCount,
+    },
+    {
+      title: "Cetățeni",
+      value: citizensCount,
+    },
+  ];
+
   return (
     <div
       style={{
@@ -32,12 +75,7 @@ export default function DashboardPage() {
           gap: "20px",
         }}
       >
-        {[
-          { title: "Sesizări Noi", value: "0" },
-          { title: "În Lucru", value: "0" },
-          { title: "Rezolvate", value: "0" },
-          { title: "Cetățeni", value: "0" },
-        ].map((card) => (
+        {cards.map((card) => (
           <div
             key={card.title}
             style={{
