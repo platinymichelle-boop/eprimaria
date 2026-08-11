@@ -1,13 +1,10 @@
-export default function Sidebar() {
-  const menuItems = [
-    "🏠 Dashboard",
-    "📝 Sesizări",
-    "👥 Cetățeni",
-    "🏛️ Instituții",
-    "📊 Rapoarte",
-    "⚙️ Setări",
-  ];
+type SidebarProps = {
+  onNavigate: (page: string) => void;
+};
 
+export default function Sidebar({
+  onNavigate,
+}: SidebarProps) {
   return (
     <div
       style={{
@@ -22,26 +19,88 @@ export default function Sidebar() {
     >
       <h2
         style={{
+          color: "white",
           marginBottom: "40px",
         }}
       >
         ePrimaria
       </h2>
 
-      {menuItems.map((item) => (
-        <div
-          key={item}
-          style={{
-            padding: "12px 15px",
-            marginBottom: "10px",
-            borderRadius: "12px",
-            cursor: "pointer",
-            background: "rgba(255,255,255,0.05)",
-          }}
-        >
-          {item}
-        </div>
-      ))}
+      <div
+        onClick={() => onNavigate("dashboard")}
+        style={{
+          padding: "15px",
+          marginBottom: "10px",
+          borderRadius: "12px",
+          cursor: "pointer",
+          background: "rgba(255,255,255,0.08)",
+          color: "white",
+        }}
+      >
+        🏠 Dashboard
+      </div>
+
+      <div
+        onClick={() => onNavigate("complaints")}
+        style={{
+          padding: "15px",
+          marginBottom: "10px",
+          borderRadius: "12px",
+          cursor: "pointer",
+          background: "rgba(255,255,255,0.08)",
+          color: "white",
+        }}
+      >
+        📝 Sesizări
+      </div>
+
+      <div
+        style={{
+          padding: "15px",
+          marginBottom: "10px",
+          borderRadius: "12px",
+          background: "rgba(255,255,255,0.04)",
+          color: "#cbd5e1",
+        }}
+      >
+        👥 Cetățeni
+      </div>
+
+      <div
+        style={{
+          padding: "15px",
+          marginBottom: "10px",
+          borderRadius: "12px",
+          background: "rgba(255,255,255,0.04)",
+          color: "#cbd5e1",
+        }}
+      >
+        🏛️ Instituții
+      </div>
+
+      <div
+        style={{
+          padding: "15px",
+          marginBottom: "10px",
+          borderRadius: "12px",
+          background: "rgba(255,255,255,0.04)",
+          color: "#cbd5e1",
+        }}
+      >
+        📊 Rapoarte
+      </div>
+
+      <div
+        style={{
+          padding: "15px",
+          marginBottom: "10px",
+          borderRadius: "12px",
+          background: "rgba(255,255,255,0.04)",
+          color: "#cbd5e1",
+        }}
+      >
+        ⚙️ Setări
+      </div>
     </div>
   );
 }
