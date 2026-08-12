@@ -13,6 +13,8 @@ import {
   Typography,
 } from "@mui/material";
 
+import { getCurrentUserRole } from "../services/userService";
+
 import {
   getComplaints,
   updateComplaintStatus,
@@ -20,13 +22,23 @@ import {
 
 export default function ComplaintsList() {
   const [complaints, setComplaints] = useState<any[]>([]);
+  const [role, setRole] = useState("");
 
   useEffect(() => {
     loadComplaints();
+    loadRole();
   }, []);
 
+  async function loadRole() {
+    const currentRole =
+      await getCurrentUserRole();
+
+    setRole(currentRole || "");
+  }
+
   async function loadComplaints() {
-    const { data, error } = await getComplaints();
+    const { data, error } =
+      await getComplaints();
 
     if (error) {
       console.error(error);
@@ -82,27 +94,21 @@ export default function ComplaintsList() {
     id: string,
     currentStatus: string
   ) {
-    const nextStatus = getNextStatus(currentStatus);
+    const nextStatus =
+      getNextStatus(currentStatus);
 
-    console.log("ID =", id);
-    console.log("Current =", currentStatus);
-    console.log("Next =", nextStatus);
-
-    const { data, error } =
+    const { error } =
       await updateComplaintStatus(
         id,
         nextStatus
       );
-
-    console.log("DATA =", data);
-    console.log("ERROR =", error);
 
     if (error) {
       alert(error.message);
       return;
     }
 
-    await loadComplaints();
+    loadComplaints();
   }
 
   return (
@@ -148,21 +154,24 @@ export default function ComplaintsList() {
                 </TableCell>
 
                 <TableCell>
-                  {complaint.status !==
-                    "resolved" && (
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() =>
-                        handleStatusChange(
-                          complaint.id,
-                          complaint.status
-                        )
-                      }
-                    >
-                      Următorul Status
-                    </Button>
-                  )}
+                  {(role === "super-admin" ||
+                    role === "admin" ||
+                    role === "operator") &&
+                    complaint.status !==
+                      "resolved" && (
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() =>
+                          handleStatusChange(
+                            complaint.id,
+                            complaint.status
+                          )
+                        }
+                      >
+                        Următorul Status
+                      </Button>
+                    )}
                 </TableCell>
               </TableRow>
             ))}

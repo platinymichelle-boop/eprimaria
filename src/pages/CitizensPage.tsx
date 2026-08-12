@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import type { Citizen } from "../types/citizen";
+
+import { getCurrentUserRole } from "../services/userService";
+
 import {
   createCitizen,
   getCitizens,
@@ -25,6 +28,7 @@ import {
 
 export default function CitizensPage() {
   const [citizens, setCitizens] = useState<Citizen[]>([]);
+  const [role, setRole] = useState("");
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -36,7 +40,15 @@ export default function CitizensPage() {
 
   useEffect(() => {
     loadCitizens();
+    loadRole();
   }, []);
+
+  async function loadRole() {
+    const currentRole =
+      await getCurrentUserRole();
+
+    setRole(currentRole || "");
+  }
 
   async function loadCitizens() {
     const data = await getCitizens();
@@ -81,7 +93,10 @@ export default function CitizensPage() {
 
       <Card sx={{ mb: 4 }}>
         <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>
+          <Typography
+            variant="h6"
+            sx={{ mb: 2 }}
+          >
             Adaugă Cetățean
           </Typography>
 
@@ -172,7 +187,10 @@ export default function CitizensPage() {
 
       <Card>
         <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>
+          <Typography
+            variant="h6"
+            sx={{ mb: 2 }}
+          >
             Listă Cetățeni
           </Typography>
 
@@ -192,22 +210,41 @@ export default function CitizensPage() {
               <TableBody>
                 {citizens.map((citizen) => (
                   <TableRow key={citizen.id}>
-                    <TableCell>{citizen.full_name}</TableCell>
-                    <TableCell>{citizen.cnp}</TableCell>
-                    <TableCell>{citizen.email}</TableCell>
-                    <TableCell>{citizen.phone}</TableCell>
-                    <TableCell>{citizen.address}</TableCell>
+                    <TableCell>
+                      {citizen.full_name}
+                    </TableCell>
 
                     <TableCell>
-                      <Button
-                        variant="contained"
-                        color="error"
-                        onClick={() =>
-                          handleDelete(citizen.id)
-                        }
-                      >
-                        Șterge
-                      </Button>
+                      {citizen.cnp}
+                    </TableCell>
+
+                    <TableCell>
+                      {citizen.email}
+                    </TableCell>
+
+                    <TableCell>
+                      {citizen.phone}
+                    </TableCell>
+
+                    <TableCell>
+                      {citizen.address}
+                    </TableCell>
+
+                    <TableCell>
+                      {role ===
+                        "super-admin" && (
+                        <Button
+                          variant="contained"
+                          color="error"
+                          onClick={() =>
+                            handleDelete(
+                              citizen.id
+                            )
+                          }
+                        >
+                          Șterge
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

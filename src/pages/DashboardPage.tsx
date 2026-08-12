@@ -20,6 +20,10 @@ import {
   getCitizensCount,
 } from "../services/complaintsService";
 
+import {
+  getCurrentMunicipality,
+} from "../services/municipalitiesService";
+
 export default function DashboardPage() {
   const [stats, setStats] = useState({
     newCount: 0,
@@ -27,7 +31,11 @@ export default function DashboardPage() {
     resolvedCount: 0,
   });
 
-  const [citizensCount, setCitizensCount] = useState(0);
+  const [citizensCount, setCitizensCount] =
+    useState(0);
+
+  const [municipality, setMunicipality] =
+    useState<any>(null);
 
   useEffect(() => {
     loadStats();
@@ -35,10 +43,18 @@ export default function DashboardPage() {
 
   const loadStats = async () => {
     const data = await getDashboardStats();
+
     setStats(data);
 
-    const citizens = await getCitizensCount();
+    const citizens =
+      await getCitizensCount();
+
     setCitizensCount(citizens);
+
+    const municipalityData =
+      await getCurrentMunicipality();
+
+    setMunicipality(municipalityData);
   };
 
   const cards = [
@@ -70,31 +86,83 @@ export default function DashboardPage() {
 
   return (
     <Box sx={{ p: 4 }}>
-      <Typography
-        variant="h4"
+      <Card
         sx={{
-          color: "#0f172a",
-          fontWeight: 700,
-          mb: 1,
-        }}
-      >
-        ePrimaria Dashboard
-      </Typography>
-
-      <Typography
-        sx={{
-          color: "#3568a5",
           mb: 4,
+          borderRadius: 4,
+          overflow: "hidden",
+          position: "relative",
+          minHeight: 260,
+
+          backgroundImage: municipality?.image_url
+            ? `url(${municipality.image_url})`
+            : "linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%)",
+
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         }}
       >
-        Platformă digitală pentru administrația publică locală
-      </Typography>
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "rgba(15,23,42,0.70)",
+          }}
+        />
+
+        <CardContent
+          sx={{
+            position: "relative",
+            zIndex: 2,
+            color: "white",
+            p: 5,
+          }}
+        >
+          <Typography
+            variant="h3"
+            sx={{
+              fontWeight: 700,
+              mb: 1,
+            }}
+          >
+            {municipality?.name ||
+              "ePrimaria"}
+          </Typography>
+
+          <Typography
+            variant="h5"
+            sx={{
+              mb: 2,
+            }}
+          >
+            Platformă Digitală pentru
+            Administrația Locală
+          </Typography>
+
+          <Typography
+            sx={{
+              fontSize: "16px",
+              opacity: 0.9,
+            }}
+          >
+            {municipality?.city &&
+            municipality?.county
+              ? `${municipality.city}, ${municipality.county}`
+              : "Bun venit în platformă"}
+          </Typography>
+        </CardContent>
+      </Card>
 
       <Grid container spacing={3}>
         {cards.map((card) => (
           <Grid
             key={card.title}
-            size={{ xs: 12, sm: 6, lg: 3 }}
+            size={{
+              xs: 12,
+              sm: 6,
+              lg: 3,
+            }}
           >
             <Card
               sx={{
@@ -106,7 +174,8 @@ export default function DashboardPage() {
                 <Box
                   sx={{
                     display: "flex",
-                    justifyContent: "space-between",
+                    justifyContent:
+                      "space-between",
                     alignItems: "center",
                   }}
                 >
@@ -140,6 +209,62 @@ export default function DashboardPage() {
             </Card>
           </Grid>
         ))}
+      </Grid>
+
+      <Grid
+        container
+        spacing={3}
+        sx={{ mt: 1 }}
+      >
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card>
+            <CardContent>
+              <Typography
+                variant="h6"
+                sx={{ mb: 2 }}
+              >
+                Activitate Recentă
+              </Typography>
+
+              <Typography>
+                • Modul activitate în dezvoltare
+              </Typography>
+
+              <Typography>
+                • Jurnal acțiuni utilizatori
+              </Typography>
+
+              <Typography>
+                • Modificări sesizări
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card>
+            <CardContent>
+              <Typography
+                variant="h6"
+                sx={{ mb: 2 }}
+              >
+                Informații Platformă
+              </Typography>
+
+              <Typography>
+                Multi-Tenant: Activ
+              </Typography>
+
+              <Typography>
+                Roluri: Activ
+              </Typography>
+
+              <Typography>
+                Supabase: Conectat
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
       </Grid>
     </Box>
   );

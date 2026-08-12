@@ -1,11 +1,19 @@
 import { supabase } from "./supabase";
 import type { Citizen } from "../types/citizen";
 
+import { getCurrentMunicipalityId } from "./municipalityService";
+
 export async function getCitizens(): Promise<Citizen[]> {
+  const municipalityId =
+    await getCurrentMunicipalityId();
+
   const { data, error } = await supabase
     .from("citizens")
     .select("*")
-    .order("created_at", { ascending: false });
+    .eq("municipality_id", municipalityId)
+    .order("created_at", {
+      ascending: false,
+    });
 
   if (error) {
     console.error(error);
@@ -18,9 +26,17 @@ export async function getCitizens(): Promise<Citizen[]> {
 export async function createCitizen(
   citizen: Omit<Citizen, "id" | "created_at">
 ) {
+  const municipalityId =
+    await getCurrentMunicipalityId();
+
   const { error } = await supabase
     .from("citizens")
-    .insert([citizen]);
+    .insert([
+      {
+        ...citizen,
+        municipality_id: municipalityId,
+      },
+    ]);
 
   if (error) {
     console.error(error);
@@ -28,12 +44,20 @@ export async function createCitizen(
 }
 
 export async function getCitizensCount(): Promise<number> {
+  const municipalityId =
+    await getCurrentMunicipalityId();
+
   const { count } = await supabase
     .from("citizens")
-    .select("*", { count: "exact", head: true });
+    .select("*", {
+      count: "exact",
+      head: true,
+    })
+    .eq("municipality_id", municipalityId);
 
   return count || 0;
 }
+
 export async function deleteCitizen(id: string) {
   const { error } = await supabase
     .from("citizens")

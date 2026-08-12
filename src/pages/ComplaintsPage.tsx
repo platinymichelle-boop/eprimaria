@@ -1,5 +1,6 @@
 import { Box, Card, CardContent, Typography } from "@mui/material";
 
+
 import ComplaintForm from "../components/ComplaintForm";
 import ComplaintsList from "../components/ComplaintsList";
 

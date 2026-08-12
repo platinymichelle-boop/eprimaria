@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Folder } from "@mui/icons-material";
 
 import {
   Dashboard,
@@ -8,9 +9,14 @@ import {
   BarChart,
   Settings,
   AdminPanelSettings,
+  Newspaper,
 } from "@mui/icons-material";
 
-import { getCurrentUser } from "../services/authService";
+import {
+  getCurrentUser,
+  getProfile,
+} from "../services/authService";
+
 import { getMunicipalityByUser } from "../services/adminService";
 
 type SidebarProps = {
@@ -23,16 +29,24 @@ export default function Sidebar({
   const [municipality, setMunicipality] =
     useState<any>(null);
 
+  const [role, setRole] =
+    useState<string>("");
+
   useEffect(() => {
-    loadMunicipality();
+    loadData();
   }, []);
 
-  async function loadMunicipality() {
+  async function loadData() {
     const {
       data: { user },
     } = await getCurrentUser();
 
     if (!user) return;
+
+    const { data: profile } =
+      await getProfile(user.id);
+
+    setRole(profile?.role || "");
 
     const { data } =
       await getMunicipalityByUser(user.id);
@@ -133,17 +147,42 @@ export default function Sidebar({
       </div>
 
       <div
-        onClick={() => onNavigate("admin")}
+        onClick={() =>
+          onNavigate("documents")
+        }
         style={menuItemStyle}
       >
-        <AdminPanelSettings />
-        Administrare
+        <Folder />
+        Documente
       </div>
 
-      <div style={menuItemStyle}>
-        <AccountBalance />
-        Instituții
+      <div
+        onClick={() => onNavigate("news")}
+        style={menuItemStyle}
+      >
+        <Newspaper />
+        Ziar Digital
       </div>
+
+      {role === "super-admin" && (
+        <div
+          onClick={() => onNavigate("admin")}
+          style={menuItemStyle}
+        >
+          <AdminPanelSettings />
+          Administrare
+        </div>
+      )}
+
+      {role === "super-admin" && (
+        <div
+          onClick={() => onNavigate("institutions")}
+          style={menuItemStyle}
+        >
+          <AccountBalance />
+          Instituții
+        </div>
+      )}
 
       <div style={menuItemStyle}>
         <BarChart />

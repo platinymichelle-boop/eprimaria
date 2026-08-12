@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { Box } from "@mui/material";
+import DocumentsPage from "./pages/DocumentsPage";
+import NewsPage from "./pages/NewsPage";
+
 
 import DashboardPage from "./pages/DashboardPage";
 import ComplaintsPage from "./pages/ComplaintsPage";
 import CitizensPage from "./pages/CitizensPage";
 import AdminPage from "./pages/AdminPage";
+import InstitutionsPage from "./pages/InstitutionsPage";
 
 import Sidebar from "./components/Sidebar";
 
@@ -63,9 +67,25 @@ export default function App() {
           <CitizensPage />
         )}
 
+        {currentPage === "documents" && (
+          <DocumentsPage />
+        )}
+
+        {currentPage === "news" && (
+          <NewsPage />
+        )}
+
         {currentPage === "admin" &&
           (isSuperAdmin ? (
             <AdminPage />
+          ) : (
+            <Box sx={{ p: 4 }}>
+              Acces interzis.
+            </Box>
+          ))}
+          {currentPage === "institutions" &&
+          (isSuperAdmin ? (
+            <InstitutionsPage />
           ) : (
             <Box sx={{ p: 4 }}>
               Acces interzis.
