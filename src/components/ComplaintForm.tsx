@@ -1,4 +1,12 @@
 import { useState } from "react";
+
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+} from "@mui/material";
+
 import { createComplaint } from "../services/complaintsService";
 
 export default function ComplaintForm() {
@@ -23,57 +31,41 @@ export default function ComplaintForm() {
   };
 
   return (
-    <div
-      style={{
-        background: "rgba(255,255,255,0.1)",
-        padding: "20px",
-        borderRadius: "20px",
-        marginTop: "20px",
-      }}
-    >
-      <h2>Sesizare nouă</h2>
+    <Box>
+      <Typography
+        variant="h6"
+        sx={{ mb: 3 }}
+      >
+        Sesizare nouă
+      </Typography>
 
-      <input
-        type="text"
-        placeholder="Titlu sesizare"
+      <TextField
+        label="Titlu sesizare"
+        fullWidth
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "12px",
-          marginBottom: "10px",
-          borderRadius: "10px",
-          border: "none",
-          boxSizing: "border-box",
-        }}
+        sx={{ mb: 2 }}
       />
 
-      <textarea
-        placeholder="Descriere"
+      <TextField
+        label="Descriere"
+        multiline
         rows={5}
+        fullWidth
         value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "12px",
-          borderRadius: "10px",
-          border: "none",
-          boxSizing: "border-box",
-        }}
+        onChange={(e) =>
+          setDescription(e.target.value)
+        }
+        sx={{ mb: 3 }}
       />
 
-      <button
+      <Button
+        variant="contained"
+        size="large"
         onClick={handleSubmit}
-        style={{
-          marginTop: "15px",
-          padding: "12px 20px",
-          borderRadius: "10px",
-          border: "none",
-          cursor: "pointer",
-        }}
       >
         Trimite sesizarea
-      </button>
-    </div>
+      </Button>
+    </Box>
   );
 }

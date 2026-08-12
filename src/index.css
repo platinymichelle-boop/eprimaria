@@ -1,34 +1,16 @@
-body {
+* {
   margin: 0;
-  min-height: 100vh;
-  font-family: Arial, sans-serif;
-  background: linear-gradient(
-    135deg,
-    #0f172a,
-    #1e3a8a,
-    #0f766e
-  );
-}
-body::before {
-  content: "";
-  position: fixed;
-  width: 500px;
-  height: 500px;
-  border-radius: 50%;
-  background: rgba(59, 130, 246, 0.2);
-  top: -200px;
-  left: -100px;
-  filter: blur(80px);
+  padding: 0;
+  box-sizing: border-box;
 }
 
-body::after {
-  content: "";
-  position: fixed;
-  width: 400px;
-  height: 400px;
-  border-radius: 50%;
-  background: rgba(16, 185, 129, 0.2);
-  bottom: -150px;
-  right: -100px;
-  filter: blur(80px);
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+body {
+  font-family: Inter, Arial, sans-serif;
 }

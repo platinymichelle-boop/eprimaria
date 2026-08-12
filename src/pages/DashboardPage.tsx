@@ -1,5 +1,24 @@
 import { useEffect, useState } from "react";
-import {getDashboardStats,getCitizensCount,} from "../services/complaintsService";
+
+import {
+  Box,
+  Card,
+  CardContent,
+  Grid,
+  Typography,
+} from "@mui/material";
+
+import {
+  Assignment,
+  HourglassTop,
+  CheckCircle,
+  People,
+} from "@mui/icons-material";
+
+import {
+  getDashboardStats,
+  getCitizensCount,
+} from "../services/complaintsService";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -18,86 +37,110 @@ export default function DashboardPage() {
     const data = await getDashboardStats();
     setStats(data);
 
-      const citizens = await getCitizensCount();
+    const citizens = await getCitizensCount();
     setCitizensCount(citizens);
   };
-
 
   const cards = [
     {
       title: "Sesizări Noi",
       value: stats.newCount,
+      color: "#3b82f6",
+      icon: <Assignment fontSize="large" />,
     },
     {
       title: "În Lucru",
       value: stats.inProgressCount,
+      color: "#f59e0b",
+      icon: <HourglassTop fontSize="large" />,
     },
     {
       title: "Rezolvate",
       value: stats.resolvedCount,
+      color: "#22c55e",
+      icon: <CheckCircle fontSize="large" />,
     },
     {
       title: "Cetățeni",
       value: citizensCount,
+      color: "#8b5cf6",
+      icon: <People fontSize="large" />,
     },
   ];
 
   return (
-    <div
-      style={{
-        flex: 1,
-        padding: "30px",
-        color: "white",
-      }}
-    >
-      <h1
-        style={{
-          fontSize: "3rem",
-          marginBottom: "10px",
+    <Box sx={{ p: 4 }}>
+      <Typography
+        variant="h4"
+        sx={{
+          color: "#0f172a",
+          fontWeight: 700,
+          mb: 1,
         }}
       >
         ePrimaria Dashboard
-      </h1>
+      </Typography>
 
-      <p
-        style={{
-          color: "#cbd5e1",
-          marginBottom: "40px",
+      <Typography
+        sx={{
+          color: "#3568a5",
+          mb: 4,
         }}
       >
-        Platformă digitală pentru administrația publică locală.
-      </p>
+        Platformă digitală pentru administrația publică locală
+      </Typography>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "20px",
-        }}
-      >
+      <Grid container spacing={3}>
         {cards.map((card) => (
-          <div
+          <Grid
             key={card.title}
-            style={{
-              background: "rgba(255,255,255,0.10)",
-              backdropFilter: "blur(10px)",
-              borderRadius: "20px",
-              padding: "25px",
-            }}
+            size={{ xs: 12, sm: 6, lg: 3 }}
           >
-            <h3>{card.title}</h3>
-
-            <p
-              style={{
-                fontSize: "2.5rem",
-                fontWeight: "bold",
+            <Card
+              sx={{
+                height: "100%",
+                borderLeft: `5px solid ${card.color}`,
               }}
             >
-              {card.value}
-            </p>
-          </div>
+              <CardContent>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                    >
+                      {card.title}
+                    </Typography>
+
+                    <Typography
+                      variant="h3"
+                      sx={{
+                        fontWeight: 700,
+                      }}
+                    >
+                      {card.value}
+                    </Typography>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      color: card.color,
+                    }}
+                  >
+                    {card.icon}
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
         ))}
-      </div>
-    </div>
+      </Grid>
+    </Box>
   );
 }

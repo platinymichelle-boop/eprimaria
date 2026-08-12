@@ -12,3 +12,13 @@ export async function signIn(email: string, password: string) {
     password,
   });
 }
+export async function getCurrentUser() {
+  return supabase.auth.getUser();
+}
+export async function getProfile(userId: string) {
+  return supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+}

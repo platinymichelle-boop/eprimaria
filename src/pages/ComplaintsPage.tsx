@@ -1,23 +1,56 @@
+import { Box, Card, CardContent, Typography } from "@mui/material";
+
 import ComplaintForm from "../components/ComplaintForm";
 import ComplaintsList from "../components/ComplaintsList";
 
 export default function ComplaintsPage() {
   return (
-    <div
-      style={{
-        padding: "30px",
-        color: "white",
-      }}
-    >
-      <h1>Sesizări</h1>
+    <Box sx={{ p: 4 }}>
+      <Typography
+        variant="h4"
+        sx={{
+          color: "#0f172a",
+          fontWeight: 700,
+          mb: 1,
+        }}
+      >
+        Sesizări
+      </Typography>
 
-      <p>
+      <Typography
+        sx={{
+          color: "#3c6394",
+          mb: 4,
+        }}
+      >
         Gestionarea sesizărilor cetățenilor.
-      </p>
+      </Typography>
 
-      <ComplaintForm />
+      <Card sx={{ mb: 4 }}>
+        <CardContent>
+          <Typography
+            variant="h6"
+            sx={{ mb: 2 }}
+          >
+            Adaugă Sesizare
+          </Typography>
 
-      <ComplaintsList />
-    </div>
+          <ComplaintForm />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent>
+          <Typography
+            variant="h6"
+            sx={{ mb: 2 }}
+          >
+            Lista Sesizări
+          </Typography>
+
+          <ComplaintsList />
+        </CardContent>
+      </Card>
+    </Box>
   );
 }
