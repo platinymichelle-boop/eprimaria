@@ -1,649 +1,340 @@
+import { useState, useEffect, useRef } from "react";
 import HTMLFlipBook from "react-pageflip";
-import { Box } from "@mui/material";
+import { Box, Button, Typography, CircularProgress } from "@mui/material";
+import { supabase } from "../services/supabase";
+import {
+  NewspaperPage,
+  type NewsPageData,
+  type NewsElement,
+} from "./NewspaperPage";
 
 export default function NewsPage() {
+  const [loading, setLoading] = useState(true);
+  const [pages, setPages] = useState<NewsPageData[]>([]);
+  const [elementsByPage, setElementsByPage] = useState<
+    Record<string, NewsElement[]>
+  >({});
+  const [editionTitle, setEditionTitle] = useState("Ediție Curentă");
+  const [currentPage, setCurrentPage] = useState(0);
+
+  const flipBookRef = useRef<any>(null);
+
+  // Injectare stiluri speciale pentru textul de ziar
+  useEffect(() => {
+    const styleId = "newspaper-flip-styles";
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.innerHTML = `
+        /* IMPORT CORECT PENTRU FONTA EDITORIALĂ */
+        @import url('https://googleapis.com');
+
+        /* ASCUNDE BARA DE SCROLL DAR PĂSTREAZĂ SCROLL-UL FUNCȚIONAL */
+        .newspaper-content-scroll::-webkit-scrollbar {
+          display: none;
+        }
+        .newspaper-content-scroll {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+
+        .newspaper-dropcap::first-letter {
+          float: left;
+          font-size: 3.5em;
+          line-height: 0.85;
+          padding-right: 8px;
+          margin-top: 4px;
+          font-weight: 700;
+          font-family: 'Playfair Display', serif;
+          color: #000;
+        }
+
+        .magazine-flipbook {
+          background-color: #f5f5f0;
+        }
+
+        .newspaper-page img {
+          transition: all .25s ease;
+        }
+
+        .newspaper-page img:hover {
+          transform: scale(1.01);
+        }
+
+        .newspaper-box {
+          border: 1px solid #111;
+          padding: 4px;
+          background: #fff;
+        }
+
+        /* REZOLVARE BUG DE AFIȘARE ÎN react-pageflip (PAGINILE TREBUIE SĂ FIE BLOCK) */
+        .page-wrapper {
+          display: block !important;
+          width: 100%;
+          height: 100%;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
+  // Preluare date din Supabase
+  useEffect(() => {
+    const fetchLatestEditionData = async () => {
+      try {
+        setLoading(true);
+
+        const { data: edition, error: edError } = await supabase
+          .from("news_editions")
+          .select("id, title")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (edError) throw edError;
+        if (!edition) {
+          setLoading(false);
+          return;
+        }
+
+        setEditionTitle(edition.title);
+
+        const { data: fetchedPages, error: pageError } = await supabase
+          .from("news_pages")
+          .select("*")
+          .eq("edition_id", edition.id)
+          .order("page_number", { ascending: true });
+
+        if (pageError) throw pageError;
+        setPages(fetchedPages || []);
+
+        if (fetchedPages && fetchedPages.length > 0) {
+          const pageIds = fetchedPages.map((p) => p.id);
+
+          const { data: fetchedElements, error: elError } = await supabase
+            .from("news_elements")
+            .select("*")
+            .in("page_id", pageIds);
+
+          if (elError) throw elError;
+
+          const mappedElements: Record<string, NewsElement[]> = {};
+          fetchedElements?.forEach((el) => {
+            if (!mappedElements[el.page_id]) {
+              mappedElements[el.page_id] = [];
+            }
+            mappedElements[el.page_id].push(el);
+          });
+
+          setElementsByPage(mappedElements);
+        }
+      } catch (err: any) {
+        console.error("Eroare la încărcarea ziarului:", err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLatestEditionData();
+  }, []);
+
+  // Event handler pentru a prinde momentul când utilizatorul întoarce pagina manual
+  const onPageFlip = (e: any) => {
+    setCurrentPage(e.data);
+  };
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          width: "100%",
+          minHeight: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          background: "radial-gradient(circle,#f8fafc,#e2e8f0)",
+        }}
+      >
+        <CircularProgress color="inherit" />
+      </Box>
+    );
+  }
+
   return (
     <Box
       sx={{
         width: "100%",
         minHeight: "100vh",
         display: "flex",
+        flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
-        background:
-          "radial-gradient(circle,#f8fafc,#dbeafe)",
+        background: "linear-gradient(135deg, #eedcc5 0%, #dfcaaf 100%)", // Gradient discret, texturat pentru ziar
         overflow: "hidden",
+        p: 2,
       }}
     >
-      <HTMLFlipBook
-        width={700}
-        minWidth={700}
-        maxWidth={700}
-        minHeight={900}
-        maxHeight={900}
-        height={900}
-        size="fixed"
-        maxShadowOpacity={0.7}
-        showCover={true}
-        mobileScrollSupport={true}
-        className=""
-        style={{}}
-        startPage={0}
-        drawShadow={true}
-        flippingTime={800}
-        usePortrait={true}
-        startZIndex={0}
-        autoSize={false}
-        clickEventForward={true}
-        useMouseEvents={true}
-        swipeDistance={30}
-        showPageCorners={true}
-        disableFlipByClick={false}
+      <Typography
+        variant="h3"
+        sx={{
+          color: "#111",
+          fontWeight: 800,
+          mb: 1,
+          fontSize: { xs: "28px", sm: "40px" },
+          fontFamily: "'Playfair Display', serif",
+          textTransform: "uppercase",
+          letterSpacing: "2px",
+          borderBottom: "4px double #111",
+          px: 4,
+          pb: 1,
+          textAlign: "center",
+        }}
       >
-        {/* PAGINA 1 */}
+        {editionTitle}
+      </Typography>
 
-                <div
-          style={{
-            backgroundImage:
-              "url('/images/oarja/Primaria.jpg')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            color: "white",
-            padding: "40px",
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            position: "relative",
-            overflow: "hidden",
+      {/* AFIȘARE NUMĂR PAGINĂ CURENTĂ (Foarte Profi) */}
+      {pages.length > 0 && (
+        <Typography
+          sx={{
+            fontFamily: "Georgia, serif",
+            fontStyle: "italic",
+            mb: 3,
+            fontSize: "14px",
+            color: "#444",
           }}
         >
+          Pagina {currentPage + 1} din {pages.length}
+        </Typography>
+      )}
 
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: { xs: 1, sm: 3 },
+          width: "100%",
+          justifyContent: "center",
+        }}
+      >
+        {/* Buton Înapoi dezactivat inteligent dacă ești la prima pagină */}
+        <Button
+          variant="contained"
+          disabled={currentPage === 0}
+          sx={{
+            background: "#111",
+            color: "#fff",
+            "&:hover": { background: "#333" },
+            "&.Mui-disabled": {
+              background: "rgba(0,0,0,0.1)",
+              color: "rgba(0,0,0,0.3)",
+            },
+            borderRadius: "50%",
+            minWidth: { xs: 45, sm: 55 },
+            height: { xs: 45, sm: 55 },
+            boxShadow: 3,
+            fontSize: "18px",
+          }}
+          onClick={() => flipBookRef.current?.pageFlip()?.flipPrev()}
+        >
+          ◀
+        </Button>
 
-          <div
-            style={{
-              position: "relative",
-              zIndex: 2,
-            }}
-          >
-            <h1
-              style={{
-                fontSize: "48px",
-                margin: 0,
-              }}
-            >
-              ZIARUL
-            </h1>
-
-            <h1
-              style={{
-                fontSize: "48px",
-                margin: 0,
-              }}
-            >
-              COMUNEI OARJA
-            </h1>
-          </div>
-
-          <div
-            style={{
-              position: "relative",
-              zIndex: 2,
-            }}
-          >
-            <h2>August 2026</h2>
-
-            <p>
-              Comunitate • Dezvoltare • Viitor
-            </p>
-          </div>
-
-          <div
-            style={{
-              position: "absolute",
-              bottom: 15,
-              right: 20,
-              fontSize: 14,
-              fontWeight: "bold",
-              opacity: 0.8,
-              zIndex: 2,
-            }}
-          >
-            1
-          </div>
-        </div>
-                {/* PAGINA 2 */}
-
-        <div
-          style={{
-            background: "#fff",
-            padding: "35px",
-            height: "100%",
-            position: "relative",
+        <Box
+          sx={{
+            backgroundColor: "#1c1a17", // Fundal tip „copertă masivă” din piele neagră/lemn sub ziar
+            padding: { xs: "6px", sm: "16px" },
+            borderRadius: "8px",
+            boxShadow:
+              "0 30px 70px rgba(0,0,0,0.45), inset 0 0 20px rgba(255,255,255,0.05)",
           }}
         >
-          <h1
-            style={{
-              color: "#0f3b75",
-              borderBottom:
-                "4px solid #c8102e",
-              paddingBottom: "10px",
-            }}
+          {/* @ts-ignore */}
+          <HTMLFlipBook
+            ref={flipBookRef}
+            width={700}
+            height={900}
+            minWidth={320} // Permite redimensionarea pe ecrane mici (Responsivitate)
+            maxWidth={700}
+            minHeight={450}
+            maxHeight={900}
+            size="stretch" // Schimbat din "fixed" în "stretch" ca să poată scădea pe laptopuri mai mici
+            maxShadowOpacity={0.5}
+            showCover={false}
+            mobileScrollSupport={true}
+            className="magazine-flipbook"
+            startPage={0}
+            drawShadow={true}
+            flippingTime={700} // Timp optimizat pentru un efect vizual fluid
+            usePortrait={true}
+            startZIndex={0}
+            autoSize={true} // Schimbat în true pentru un comportament auto-scalabil fluid
+            clickEventForward={true}
+            useMouseEvents={true}
+            swipeDistance={30}
+            showPageCorners={true}
+            disableFlipByClick={false}
+            onFlip={onPageFlip} // Trimite numărul paginii în starea React la întoarcere
+            style={{ boxShadow: "0 0 20px rgba(0,0,0,0.2)" }}
           >
-            Mesaj către cetățeni
-          </h1>
+            {pages.length === 0 ? (
+              <div
+                style={{
+                  background: "#fbfbf8",
+                  padding: "40px",
+                  height: "100%",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color: "#64748b",
+                    fontStyle: "italic",
+                    fontFamily: "Georgia, serif",
+                  }}
+                >
+                  Nu există pagini disponibile.
+                </Typography>
+              </div>
+            ) : (
+              pages.map((page) => (
+                <div key={page.id} className="page-wrapper">
+                  <NewspaperPage
+                    page={page}
+                    elements={elementsByPage[page.id] || []}
+                  />
+                </div>
+              ))
+            )}
+          </HTMLFlipBook>
+        </Box>
 
-          <p
-            style={{
-              lineHeight: 1.9,
-              fontSize: "17px",
-            }}
-          >
-            Ne dorim o comună modernă,
-            curată și unită, unde fiecare
-            cetățean să se simtă respectat
-            și ascultat.
-          </p>
-
-          <p
-            style={{
-              lineHeight: 1.9,
-              fontSize: "17px",
-            }}
-          >
-            Continuăm investițiile în
-            infrastructură, educație,
-            servicii publice și dezvoltarea
-            locală pentru toți locuitorii
-            comunei Oarja.
-          </p>
-
-          <div
-            style={{
-              position: "absolute",
-              bottom: 15,
-              left: 20,
-              fontSize: 14,
-              color: "#64748b",
-              fontWeight: "bold",
-            }}
-          >
-            2
-          </div>
-        </div>
-
-        {/* PAGINA 3 */}
-
-        <div
-          style={{
-            background: "#faf8f5",
-            padding: "35px",
-            height: "100%",
-            position: "relative",
+        {/* Buton Înainte dezactivat inteligent dacă ești la ultima pagină */}
+        <Button
+          variant="contained"
+          disabled={currentPage === pages.length - 1 || pages.length === 0}
+          sx={{
+            background: "#111",
+            color: "#fff",
+            "&:hover": { background: "#333" },
+            "&.Mui-disabled": {
+              background: "rgba(0,0,0,0.1)",
+              color: "rgba(0,0,0,0.3)",
+            },
+            borderRadius: "50%",
+            minWidth: { xs: 45, sm: 55 },
+            height: { xs: 45, sm: 55 },
+            boxShadow: 3,
+            fontSize: "18px",
           }}
+          onClick={() => flipBookRef.current?.pageFlip()?.flipNext()}
         >
-          <h1
-            style={{
-              color: "#0f3b75",
-            }}
-          >
-            Istoria Comunei Oarja
-          </h1>
-
-          <p
-            style={{
-              columnCount: 2,
-              lineHeight: 1.8,
-              fontSize: "15px",
-            }}
-          >
-            Oarja este o comună din
-            județul Argeș, situată în
-            centrul județului.
-
-            Comuna este formată din
-            satele Oarja și Ceaușești și
-            are o poziție importantă în
-            zona de sud a județului.
-
-            De-a lungul timpului
-            localitatea s-a dezvoltat prin
-            agricultură, activități
-            comerciale și investiții
-            locale.
-
-            Astăzi comuna continuă să
-            investească în infrastructură,
-            educație și servicii publice
-            moderne.
-          </p>
-
-          <div
-            style={{
-              position: "absolute",
-              bottom: 15,
-              right: 20,
-              fontSize: 14,
-              color: "#64748b",
-              fontWeight: "bold",
-            }}
-          >
-            3
-          </div>
-        </div>
-                {/* PAGINA 4 */}
-
-        <div
-          style={{
-            background: "white",
-            padding: "25px",
-            height: "100%",
-            position: "relative",
-          }}
-        >
-          <h1
-            style={{
-              color: "#0f3b75",
-              marginTop: 0,
-            }}
-          >
-            Viața Comunității
-          </h1>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "1fr 1fr",
-              gap: "10px",
-            }}
-          >
-            <div
-              style={{
-                height: "180px",
-                background: "#dbeafe",
-                borderRadius: "8px",
-              }}
-            />
-
-            <div
-              style={{
-                height: "180px",
-                background: "#bfdbfe",
-                borderRadius: "8px",
-              }}
-            />
-
-            <div
-              style={{
-                height: "180px",
-                background: "#93c5fd",
-                borderRadius: "8px",
-              }}
-            />
-
-            <div
-              style={{
-                height: "180px",
-                background: "#60a5fa",
-                borderRadius: "8px",
-              }}
-            />
-          </div>
-
-          <p
-            style={{
-              marginTop: "20px",
-              lineHeight: 1.8,
-            }}
-          >
-            Evenimentele locale,
-            activitățile culturale și
-            proiectele dedicate copiilor
-            contribuie la dezvoltarea unei
-            comunități active și unite.
-          </p>
-
-          <div
-            style={{
-              position: "absolute",
-              bottom: 15,
-              left: 20,
-              fontSize: 14,
-              color: "#64748b",
-              fontWeight: "bold",
-            }}
-          >
-            4
-          </div>
-        </div>
-
-        {/* PAGINA 5 */}
-
-        <div
-          style={{
-            background: "#fff",
-            padding: "35px",
-            height: "100%",
-            position: "relative",
-          }}
-        >
-          <h1
-            style={{
-              color: "#0f3b75",
-              borderBottom:
-                "3px solid #f59e0b",
-              paddingBottom: "10px",
-            }}
-          >
-            Colectarea Selectivă
-          </h1>
-
-          <p
-            style={{
-              lineHeight: 1.9,
-              fontSize: "16px",
-            }}
-          >
-            Protejarea mediului începe cu
-            fiecare dintre noi.
-          </p>
-
-          <p
-            style={{
-              lineHeight: 1.9,
-              fontSize: "16px",
-            }}
-          >
-            Primăria încurajează
-            colectarea selectivă și
-            utilizarea corespunzătoare a
-            containerelor dedicate
-            reciclării.
-          </p>
-
-          <div
-            style={{
-              marginTop: "25px",
-              height: "260px",
-              background: "#dcfce7",
-              borderRadius: "10px",
-            }}
-          />
-
-          <div
-            style={{
-              position: "absolute",
-              bottom: 15,
-              right: 20,
-              fontSize: 14,
-              color: "#64748b",
-              fontWeight: "bold",
-            }}
-          >
-            5
-          </div>
-        </div>
-                {/* PAGINA 6 */}
-
-        <div
-          style={{
-            background: "#faf8f5",
-            padding: "35px",
-            height: "100%",
-            position: "relative",
-          }}
-        >
-          <h1
-            style={{
-              color: "#0f3b75",
-            }}
-          >
-            Investim în Viitor
-          </h1>
-
-          <ul
-            style={{
-              lineHeight: 2.2,
-              fontSize: "17px",
-            }}
-          >
-            <li>
-              Modernizarea
-              infrastructurii rutiere
-            </li>
-
-            <li>
-              Dezvoltarea serviciilor
-              digitale
-            </li>
-
-            <li>
-              Îmbunătățirea iluminatului
-              public
-            </li>
-
-            <li>
-              Investiții în educație
-            </li>
-
-            <li>
-              Proiecte de protecție a
-              mediului
-            </li>
-
-            <li>
-              Creșterea calității vieții
-              cetățenilor
-            </li>
-          </ul>
-
-          <div
-            style={{
-              position: "absolute",
-              bottom: 15,
-              left: 20,
-              fontSize: 14,
-              color: "#64748b",
-              fontWeight: "bold",
-            }}
-          >
-            6
-          </div>
-        </div>
-
-        {/* PAGINA 7 */}
-
-        <div
-          style={{
-            background: "#ffffff",
-            padding: "35px",
-            height: "100%",
-            position: "relative",
-          }}
-        >
-          <h1
-            style={{
-              color: "#0f3b75",
-              marginTop: 0,
-            }}
-          >
-            Servicii pentru Cetățeni
-          </h1>
-
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "18px",
-              marginTop: "30px",
-            }}
-          >
-            <div
-              style={{
-                padding: "15px",
-                background: "#eff6ff",
-                borderRadius: "8px",
-              }}
-            >
-              Monitorul Oficial Local
-            </div>
-
-            <div
-              style={{
-                padding: "15px",
-                background: "#eff6ff",
-                borderRadius: "8px",
-              }}
-            >
-              Consiliul Local
-            </div>
-
-            <div
-              style={{
-                padding: "15px",
-                background: "#eff6ff",
-                borderRadius: "8px",
-              }}
-            >
-              Asistență Socială
-            </div>
-
-            <div
-              style={{
-                padding: "15px",
-                background: "#eff6ff",
-                borderRadius: "8px",
-              }}
-            >
-              Informații de Interes Public
-            </div>
-
-            <div
-              style={{
-                padding: "15px",
-                background: "#eff6ff",
-                borderRadius: "8px",
-              }}
-            >
-              Registratură Digitală
-            </div>
-          </div>
-
-          <div
-            style={{
-              position: "absolute",
-              bottom: 15,
-              right: 20,
-              fontSize: 14,
-              color: "#64748b",
-              fontWeight: "bold",
-            }}
-          >
-            7
-          </div>
-        </div>
-                {/* PAGINA 8 */}
-
-        <div
-          style={{
-            background:
-              "linear-gradient(180deg,#0f3b75,#071f43)",
-            color: "white",
-            padding: "35px",
-            height: "100%",
-            position: "relative",
-          }}
-        >
-          <h1
-            style={{
-              marginTop: 0,
-            }}
-          >
-            Contact
-          </h1>
-
-          <h2>
-            Primăria Comunei Oarja
-          </h2>
-
-          <hr
-            style={{
-              margin: "20px 0",
-              borderColor:
-                "rgba(255,255,255,0.2)",
-            }}
-          />
-
-          <p
-            style={{
-              fontSize: "18px",
-              lineHeight: 2,
-            }}
-          >
-            📞 0248 660 341
-          </p>
-
-          <p
-            style={{
-              fontSize: "18px",
-              lineHeight: 2,
-            }}
-          >
-            ✉ primarie@oarja.cjarges.ro
-          </p>
-
-          <p
-            style={{
-              fontSize: "18px",
-              lineHeight: 2,
-            }}
-          >
-            📍 Comuna Oarja, Argeș
-          </p>
-
-          <div
-            style={{
-              marginTop: "60px",
-              padding: "20px",
-              border:
-                "1px solid rgba(255,255,255,0.2)",
-              borderRadius: "10px",
-            }}
-          >
-            <h3>
-              Linkuri utile
-            </h3>
-
-            <p>
-              • Consiliul Județean Argeș
-            </p>
-
-            <p>
-              • Protecția Consumatorului
-            </p>
-
-            <p>
-              • Portal ePrimaria
-            </p>
-          </div>
-
-          <div
-            style={{
-              position: "absolute",
-              bottom: 15,
-              left: 20,
-              fontSize: 14,
-              color: "#ffffff",
-              fontWeight: "bold",
-              opacity: 0.8,
-            }}
-          >
-            8
-          </div>
-        </div>
-
-      </HTMLFlipBook>
+          ▶
+        </Button>
+      </Box>
     </Box>
   );
 }

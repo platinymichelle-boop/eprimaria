@@ -12,10 +12,7 @@ import {
   Newspaper,
 } from "@mui/icons-material";
 
-import {
-  getCurrentUser,
-  getProfile,
-} from "../services/authService";
+import { getCurrentUser, getProfile } from "../services/authService";
 
 import { getMunicipalityByUser } from "../services/adminService";
 
@@ -23,14 +20,10 @@ type SidebarProps = {
   onNavigate: (page: string) => void;
 };
 
-export default function Sidebar({
-  onNavigate,
-}: SidebarProps) {
-  const [municipality, setMunicipality] =
-    useState<any>(null);
+export default function Sidebar({ onNavigate }: SidebarProps) {
+  const [municipality, setMunicipality] = useState<any>(null);
 
-  const [role, setRole] =
-    useState<string>("");
+  const [role, setRole] = useState<string>("");
 
   useEffect(() => {
     loadData();
@@ -43,13 +36,11 @@ export default function Sidebar({
 
     if (!user) return;
 
-    const { data: profile } =
-      await getProfile(user.id);
+    const { data: profile } = await getProfile(user.id);
 
     setRole(profile?.role || "");
 
-    const { data } =
-      await getMunicipalityByUser(user.id);
+    const { data } = await getMunicipalityByUser(user.id);
 
     if (data?.municipalities) {
       setMunicipality(data.municipalities);
@@ -130,66 +121,48 @@ export default function Sidebar({
         Dashboard
       </div>
 
-      <div
-        onClick={() => onNavigate("complaints")}
-        style={menuItemStyle}
-      >
+      <div onClick={() => onNavigate("complaints")} style={menuItemStyle}>
         <Description />
         Sesizări
       </div>
 
-      <div
-        onClick={() => onNavigate("citizens")}
-        style={menuItemStyle}
-      >
+      <div onClick={() => onNavigate("citizens")} style={menuItemStyle}>
         <People />
         Cetățeni
       </div>
 
-      <div
-        onClick={() =>
-          onNavigate("documents")
-        }
-        style={menuItemStyle}
-      >
+      <div onClick={() => onNavigate("documents")} style={menuItemStyle}>
         <Folder />
         Documente
       </div>
 
-      <div
-        onClick={() => onNavigate("news")}
-        style={menuItemStyle}
-      >
+      <div onClick={() => onNavigate("news")} style={menuItemStyle}>
         <Newspaper />
         Ziar Digital
       </div>
 
       {role === "super-admin" && (
-        <div
-          onClick={() => onNavigate("admin")}
-          style={menuItemStyle}
-        >
+        <div onClick={() => onNavigate("admin")} style={menuItemStyle}>
           <AdminPanelSettings />
           Administrare
         </div>
       )}
 
       {role === "super-admin" && (
-        <div
-          onClick={() => onNavigate("institutions")}
-          style={menuItemStyle}
-        >
+        <div onClick={() => onNavigate("institutions")} style={menuItemStyle}>
           <AccountBalance />
           Instituții
         </div>
       )}
 
-      <div style={menuItemStyle}>
+      {/* CORECTAT: Conectat cu funcția onNavigate pentru pagina de rapoarte */}
+      <div onClick={() => onNavigate("reports")} style={menuItemStyle}>
         <BarChart />
         Rapoarte
       </div>
 
-      <div style={menuItemStyle}>
+      {/* CORECTAT: Conectat cu funcția onNavigate pentru pagina de setări */}
+      <div onClick={() => onNavigate("settings")} style={menuItemStyle}>
         <Settings />
         Setări
       </div>

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Box } from "@mui/material";
 import DocumentsPage from "./pages/DocumentsPage";
-import NewsPage from "./pages/NewsPage";
-
+import NewspaperTemplate from "./pages/NewspaperTemplate";
 
 import DashboardPage from "./pages/DashboardPage";
 import ComplaintsPage from "./pages/ComplaintsPage";
@@ -10,12 +9,13 @@ import CitizensPage from "./pages/CitizensPage";
 import AdminPage from "./pages/AdminPage";
 import InstitutionsPage from "./pages/InstitutionsPage";
 
+// ADĂUGAT: Importul noilor pagini pentru Rapoarte și Setări
+import ReportsPage from "./pages/ReportsPage";
+import SettingsPage from "./pages/SettingsPage";
+
 import Sidebar from "./components/Sidebar";
 
-import {
-  getCurrentUser,
-  getProfile,
-} from "./services/authService";
+import { getCurrentUser, getProfile } from "./services/authService";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState("dashboard");
@@ -55,41 +55,35 @@ export default function App() {
           overflow: "auto",
         }}
       >
-        {currentPage === "dashboard" && (
-          <DashboardPage />
-        )}
+        {currentPage === "dashboard" && <DashboardPage />}
 
-        {currentPage === "complaints" && (
-          <ComplaintsPage />
-        )}
+        {currentPage === "complaints" && <ComplaintsPage />}
 
-        {currentPage === "citizens" && (
-          <CitizensPage />
-        )}
+        {currentPage === "citizens" && <CitizensPage />}
 
-        {currentPage === "documents" && (
-          <DocumentsPage />
-        )}
+        {currentPage === "documents" && <DocumentsPage />}
 
-        {currentPage === "news" && (
-          <NewsPage />
-        )}
+        {/* Ziarul Digital în stil clasic */}
+        {currentPage === "news" && <NewspaperTemplate />}
+
+        {/* ADĂUGAT: Randarea paginii de Rapoarte */}
+        {currentPage === "reports" && <ReportsPage />}
+
+        {/* ADĂUGAT: Randarea paginii de Setări */}
+        {currentPage === "settings" && <SettingsPage />}
 
         {currentPage === "admin" &&
           (isSuperAdmin ? (
             <AdminPage />
           ) : (
-            <Box sx={{ p: 4 }}>
-              Acces interzis.
-            </Box>
+            <Box sx={{ p: 4 }}>Acces interzis.</Box>
           ))}
-          {currentPage === "institutions" &&
+
+        {currentPage === "institutions" &&
           (isSuperAdmin ? (
             <InstitutionsPage />
           ) : (
-            <Box sx={{ p: 4 }}>
-              Acces interzis.
-            </Box>
+            <Box sx={{ p: 4 }}>Acces interzis.</Box>
           ))}
       </Box>
     </Box>
