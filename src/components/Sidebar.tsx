@@ -10,9 +10,12 @@ import {
   Settings,
   AdminPanelSettings,
   Newspaper,
+  Menu as MenuIcon,
 } from "@mui/icons-material";
 
-import { getCurrentUser, getProfile,signOut, } from "../services/authService";
+import { Drawer, IconButton, useMediaQuery } from "@mui/material";
+
+import { getCurrentUser, getProfile, signOut } from "../services/authService";
 
 import { getMunicipalityByUser } from "../services/adminService";
 
@@ -23,7 +26,11 @@ type SidebarProps = {
 export default function Sidebar({ onNavigate }: SidebarProps) {
   const [municipality, setMunicipality] = useState<any>(null);
 
-  const [role, setRole] = useState<string>("");
+  const [role, setRole] = useState("");
+
+  const isMobile = useMediaQuery("(max-width:900px)");
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -47,6 +54,14 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
     }
   }
 
+  function navigate(page: string) {
+    onNavigate(page);
+
+    if (isMobile) {
+      setDrawerOpen(false);
+    }
+  }
+
   const menuItemStyle = {
     display: "flex",
     alignItems: "center",
@@ -59,7 +74,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
     transition: "all 0.2s",
   };
 
-  return (
+  const sidebarContent = (
     <div
       style={{
         width: "260px",
@@ -111,7 +126,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
       )}
 
       <div
-        onClick={() => onNavigate("dashboard")}
+        onClick={() => navigate("dashboard")}
         style={{
           ...menuItemStyle,
           background: "#1e293b",
@@ -121,48 +136,46 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         Dashboard
       </div>
 
-      <div onClick={() => onNavigate("complaints")} style={menuItemStyle}>
+      <div onClick={() => navigate("complaints")} style={menuItemStyle}>
         <Description />
         Sesizări
       </div>
 
-      <div onClick={() => onNavigate("citizens")} style={menuItemStyle}>
+      <div onClick={() => navigate("citizens")} style={menuItemStyle}>
         <People />
         Cetățeni
       </div>
 
-      <div onClick={() => onNavigate("documents")} style={menuItemStyle}>
+      <div onClick={() => navigate("documents")} style={menuItemStyle}>
         <Folder />
         Documente
       </div>
 
-      <div onClick={() => onNavigate("news")} style={menuItemStyle}>
+      <div onClick={() => navigate("news")} style={menuItemStyle}>
         <Newspaper />
         Ziar Digital
       </div>
 
       {role === "super-admin" && (
-        <div onClick={() => onNavigate("admin")} style={menuItemStyle}>
+        <div onClick={() => navigate("admin")} style={menuItemStyle}>
           <AdminPanelSettings />
           Administrare
         </div>
       )}
 
       {role === "super-admin" && (
-        <div onClick={() => onNavigate("institutions")} style={menuItemStyle}>
+        <div onClick={() => navigate("institutions")} style={menuItemStyle}>
           <AccountBalance />
           Instituții
         </div>
       )}
 
-      {/* CORECTAT: Conectat cu funcția onNavigate pentru pagina de rapoarte */}
-      <div onClick={() => onNavigate("reports")} style={menuItemStyle}>
+      <div onClick={() => navigate("reports")} style={menuItemStyle}>
         <BarChart />
         Rapoarte
       </div>
 
-      {/* CORECTAT: Conectat cu funcția onNavigate pentru pagina de setări */}
-      <div onClick={() => onNavigate("settings")} style={menuItemStyle}>
+      <div onClick={() => navigate("settings")} style={menuItemStyle}>
         <Settings />
         Setări
       </div>
@@ -183,4 +196,30 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
       </div>
     </div>
   );
+
+  if (isMobile) {
+    return (
+      <>
+        <IconButton
+          onClick={() => setDrawerOpen(true)}
+          sx={{
+            position: "fixed",
+            top: 10,
+            left: 10,
+            zIndex: 2000,
+            backgroundColor: "white",
+            boxShadow: 2,
+          }}
+        >
+          <MenuIcon />
+        </IconButton>
+
+        <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+          {sidebarContent}
+        </Drawer>
+      </>
+    );
+  }
+
+  return sidebarContent;
 }
