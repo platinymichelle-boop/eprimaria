@@ -12,7 +12,7 @@ import {
   Newspaper,
 } from "@mui/icons-material";
 
-import { getCurrentUser, getProfile } from "../services/authService";
+import { getCurrentUser, getProfile,signOut, } from "../services/authService";
 
 import { getMunicipalityByUser } from "../services/adminService";
 
@@ -165,6 +165,21 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
       <div onClick={() => onNavigate("settings")} style={menuItemStyle}>
         <Settings />
         Setări
+      </div>
+
+      <div
+        onClick={async () => {
+          await signOut();
+          window.location.reload();
+        }}
+        style={{
+          ...menuItemStyle,
+          marginTop: "30px",
+          background: "#7f1d1d",
+          color: "white",
+        }}
+      >
+        Ieșire din cont
       </div>
     </div>
   );

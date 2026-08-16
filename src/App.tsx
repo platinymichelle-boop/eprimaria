@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react";
 import { Box } from "@mui/material";
+
 import DocumentsPage from "./pages/DocumentsPage";
 import NewspaperTemplate from "./pages/NewspaperTemplate";
-
 import DashboardPage from "./pages/DashboardPage";
 import ComplaintsPage from "./pages/ComplaintsPage";
 import CitizensPage from "./pages/CitizensPage";
 import AdminPage from "./pages/AdminPage";
 import InstitutionsPage from "./pages/InstitutionsPage";
-
-// ADĂUGAT: Importul noilor pagini pentru Rapoarte și Setări
 import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
+import LoginPage from "./pages/LoginPage";
 
 import Sidebar from "./components/Sidebar";
 
@@ -19,24 +18,62 @@ import { getCurrentUser, getProfile } from "./services/authService";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState("dashboard");
+
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    loadUserRole();
+    checkAuth();
   }, []);
 
-  async function loadUserRole() {
-    const {
-      data: { user },
-    } = await getCurrentUser();
+  async function checkAuth() {
+    try {
+      const {
+        data: { user },
+      } = await getCurrentUser();
 
-    if (!user) return;
+      if (!user) {
+        setIsAuthenticated(false);
+        return;
+      }
 
-    const { data } = await getProfile(user.id);
+      setIsAuthenticated(true);
 
-    if (data?.role === "super-admin") {
-      setIsSuperAdmin(true);
+      const { data } = await getProfile(user.id);
+
+      if (data?.role === "super-admin") {
+        setIsSuperAdmin(true);
+      }
+    } catch (error) {
+      console.error(error);
+      setIsAuthenticated(false);
+    } finally {
+      setLoading(false);
     }
+  }
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 18,
+          fontWeight: 600,
+        }}
+      >
+        Se încarcă...
+      </Box>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
   }
 
   return (
@@ -63,13 +100,10 @@ export default function App() {
 
         {currentPage === "documents" && <DocumentsPage />}
 
-        {/* Ziarul Digital în stil clasic */}
         {currentPage === "news" && <NewspaperTemplate />}
 
-        {/* ADĂUGAT: Randarea paginii de Rapoarte */}
         {currentPage === "reports" && <ReportsPage />}
 
-        {/* ADĂUGAT: Randarea paginii de Setări */}
         {currentPage === "settings" && <SettingsPage />}
 
         {currentPage === "admin" &&

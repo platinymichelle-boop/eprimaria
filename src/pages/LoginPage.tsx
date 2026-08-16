@@ -26,7 +26,7 @@ export default function LoginPage() {
       return;
     }
 
-    alert("Autentificare reușită!");
+    window.location.reload();
   };
 
   return (

@@ -33,3 +33,7 @@ export async function getProfile(
     .eq("id", userId)
     .maybeSingle();
 }
+
+export async function signOut() {
+  return supabase.auth.signOut();
+}
