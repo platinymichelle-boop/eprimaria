@@ -29,6 +29,13 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   const [role, setRole] = useState("");
 
   const isMobile = useMediaQuery("(max-width:900px)");
+  console.log(
+  "WIDTH",
+  window.innerWidth,
+  "isMobile",
+  isMobile
+);
+
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
