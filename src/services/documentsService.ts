@@ -62,3 +62,16 @@ export async function getDocuments() {
 export async function updateDocumentStatus(id: string, nextStatus: string) {
   return supabase.from("documents").update({ status: nextStatus }).eq("id", id);
 }
+// 5. Funcție prin care funcționarul încarcă răspunsul oficial și finalizează documentul
+export async function finalizeDocumentWithResponse(
+  id: string,
+  responseUrl: string,
+) {
+  return supabase
+    .from("documents")
+    .update({
+      status: "completed",
+      response_file_url: responseUrl,
+    })
+    .eq("id", id);
+}

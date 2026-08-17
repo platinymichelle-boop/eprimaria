@@ -1,5 +1,6 @@
-import { supabase } from "../services/supabase"; // <--- AM ADĂUGAT ACEST IMPORT
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "../services/supabase";
 import {
   Box,
   Button,
@@ -26,6 +27,7 @@ import {
   NoteAdd as AddIcon,
   AttachFile as AttachIcon,
   Visibility as ViewIcon,
+  CloudDownload as DownloadIcon,
 } from "@mui/icons-material";
 
 import {
@@ -33,9 +35,11 @@ import {
   getDocuments,
   updateDocumentStatus,
   uploadDocumentFile,
+  finalizeDocumentWithResponse,
 } from "../services/documentsService";
 
-// Categorii standard folosite în primării
+import { getCurrentUserRole } from "../services/userService";
+
 const CATEGORII_PRIMARIE = [
   "CADASTRU",
   "URBANISM & AUTORIZAȚII",
@@ -49,60 +53,57 @@ export default function DocumentsPage() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
+  const [userRole, setUserRole] = useState("");
 
-  // State-uri pentru fișierul atașat
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [responseFile, setResponseFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [activeDocId, setActiveDocId] = useState<string | null>(null);
 
   useEffect(() => {
     loadDocuments();
+    loadUserRole();
 
-    // 1. Cerem permisiunea cetățeanului pentru a trimite notificări push pe ecran
     if (typeof window !== "undefined" && "Notification" in window) {
       if (Notification.permission === "default") {
         Notification.requestPermission();
       }
     }
 
-    // 2. Ne conectăm la canalul live din Supabase pentru a asculta modificările de status
     const channel = supabase
       .channel("alerte-status")
       .on(
         "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "documents",
-        },
+        { event: "UPDATE", schema: "public", table: "documents" },
         (payload) => {
           const docModificat = payload.new;
-
-          // Declanșăm o notificare Push nativă pe ecranul utilizatorului
           if (
             typeof window !== "undefined" &&
             "Notification" in window &&
             Notification.permission === "granted"
           ) {
             new Notification("ePrimăria Alerte", {
-              body: `Cererea ta (${docModificat.number}) a fost trecută în stadiul: ${
+              body: `Cererea ta (${docModificat.number}) are un status nou: ${
                 docModificat.status === "in_progress"
                   ? "În lucru 📝"
                   : "Finalizat ✅"
               }`,
             });
           }
-
-          // Reîncărcăm automat tabelul pe ecran, fără ca utilizatorul să dea refresh manual!
           loadDocuments();
         },
       )
       .subscribe();
 
-    // Închidem canalul de comunicare când utilizatorul părăsește pagina
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  async function loadUserRole() {
+    const role = await getCurrentUserRole();
+    setUserRole(role || "citizen");
+  }
 
   async function loadDocuments() {
     const { data, error } = await getDocuments();
@@ -136,25 +137,35 @@ export default function DocumentsPage() {
     }
   }
 
-  function getNextStatus(status: string) {
-    switch (status) {
-      case "registered":
-        return "in_progress";
-      case "in_progress":
-        return "completed";
-      default:
-        return "completed";
-    }
+  async function handleStartProgress(id: string) {
+    const { error } = await updateDocumentStatus(id, "in_progress");
+    if (error) alert(error.message);
+    loadDocuments();
   }
 
-  async function handleStatusChange(id: string, currentStatus: string) {
-    const nextStatus = getNextStatus(currentStatus);
-    const { error } = await updateDocumentStatus(id, nextStatus);
-
-    if (error) {
-      alert(error.message);
+  async function handleFinalizeWithFile(id: string) {
+    if (!responseFile) {
+      alert("Te rugăm să încarci documentul oficial de răspuns mai întâi!");
       return;
     }
+    setUploading(true);
+    const { fileUrl, error: uploadError } =
+      await uploadDocumentFile(responseFile);
+
+    if (uploadError) {
+      alert("Eroare la încărcare: " + uploadError.message);
+      setUploading(false);
+      return;
+    }
+
+    if (fileUrl) {
+      const { error } = await finalizeDocumentWithResponse(id, fileUrl);
+      if (error) alert(error.message);
+    }
+
+    setUploading(false);
+    setResponseFile(null);
+    setActiveDocId(null);
     loadDocuments();
   }
 
@@ -168,19 +179,17 @@ export default function DocumentsPage() {
     setUploading(true);
     let finalFileUrl = "";
 
-    // Dacă utilizatorul a pus un fișier, îl trimitem mai întâi în Storage
     if (selectedFile) {
       const { fileUrl, error: uploadError } =
         await uploadDocumentFile(selectedFile);
       if (uploadError) {
-        alert("Eroare la încărcarea fișierului: " + uploadError.message);
+        alert("Eroare: " + uploadError.message);
         setUploading(false);
         return;
       }
       if (fileUrl) finalFileUrl = fileUrl;
     }
 
-    // Salvăm rândul în baza de date împreună cu link-ul fișierului
     const { error } = await createDocument(title, category, finalFileUrl);
     setUploading(false);
 
@@ -194,7 +203,6 @@ export default function DocumentsPage() {
     setSelectedFile(null);
     loadDocuments();
   }
-
   return (
     <Box
       sx={{
@@ -203,311 +211,421 @@ export default function DocumentsPage() {
         minHeight: "100vh",
       }}
     >
-      <Typography
-        variant="h4"
-        sx={{ fontWeight: 800, mb: 3, color: "#1e293b" }}
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5 }}
       >
-        Documente / Registratură
-      </Typography>
-
-      {/* Formular Înregistrare */}
-      <Card
-        sx={{
-          mb: 4,
-          borderRadius: "16px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-        }}
-      >
-        <CardContent sx={{ p: 3 }}>
-          <Typography
-            variant="h6"
-            sx={{ mb: 3, fontWeight: 700, color: "#334155" }}
-          >
-            Înregistrare Document Nou
-          </Typography>
-
-          <form onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
-              <Grid size={{ xs: 12, md: 7 }}>
-                <TextField
-                  fullWidth
-                  label="Titlu / Descriere Document"
-                  placeholder="Ex: Cerere autorizație de construire..."
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-              </Grid>
-
-              <Grid size={{ xs: 12, md: 5 }}>
-                <TextField
-                  fullWidth
-                  select
-                  label="Categorie"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                >
-                  {CATEGORII_PRIMARIE.map((option) => (
-                    <MenuItem key={option} value={option}>
-                      {option}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-
-              {/* Buton Selectare Fișier */}
-              <Grid size={{ xs: 12 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 2,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    color="secondary"
-                    startIcon={<AttachIcon />}
-                    sx={{
-                      textTransform: "none",
-                      fontWeight: 600,
-                      borderRadius: "8px",
-                    }}
-                  >
-                    Alege fișier (PDF, Imagini, Excel, CSV)
-                    <input
-                      type="file"
-                      hidden
-                      accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.csv"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          setSelectedFile(e.target.files[0]);
-                        }
-                      }}
-                    />
-                  </Button>
-
-                  {selectedFile && (
-                    <Typography
-                      variant="body2"
-                      sx={{ color: "#059669", fontWeight: 600 }}
-                    >
-                      Fișier selectat: {selectedFile.name} (
-                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                    </Typography>
-                  )}
-                </Box>
-              </Grid>
-
-              <Grid size={{ xs: 12 }}>
-                <Button
-                  type="submit"
-                  disabled={uploading}
-                  variant="contained"
-                  startIcon={
-                    uploading ? (
-                      <CircularProgress size={20} color="inherit" />
-                    ) : (
-                      <AddIcon />
-                    )
-                  }
-                  sx={{
-                    px: 4,
-                    py: 1.5,
-                    borderRadius: "10px",
-                    fontWeight: "bold",
-                    backgroundColor: "#2563eb",
-                    "&:hover": { backgroundColor: "#1d4ed8" },
-                  }}
-                >
-                  {uploading
-                    ? "Se încarcă fișierul..."
-                    : "Înregistrează în Registru"}
-                </Button>
-              </Grid>
-            </Grid>
-          </form>
-        </CardContent>
-      </Card>
-      {/* Registru Documente sub formă de tabel */}
-      <Card
-        sx={{ borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
-      >
-        <CardContent sx={{ p: 3 }}>
-          <Typography
-            variant="h6"
-            sx={{ mb: 3, fontWeight: 700, color: "#334155" }}
-          >
-            Registru General Digital
-          </Typography>
-
-          <TableContainer
-            component={Paper}
+        <Typography
+          variant="h4"
+          sx={{ fontWeight: 800, mb: 3, color: "#1e293b" }}
+        >
+          Documente / Registratură
+        </Typography>
+      </motion.div>
+      {/* 🔴 ADĂUGĂM CONDIȚIA AICI: Formularul se deschide doar dacă utilizatorul este cetățean */}
+      {userRole === "citizen" && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+          <Card
             sx={{
-              borderRadius: "12px",
-              boxShadow: "none",
-              border: "1px solid #e2e8f0",
+              mb: 4,
+              borderRadius: "16px",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.03)",
+              overflow: "hidden",
             }}
           >
-            <Table>
-              <TableHead sx={{ backgroundColor: "#f1f5f9" }}>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 700, color: "#475569" }}>
-                    Număr
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "#475569" }}>
-                    Titlu Document
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "#475569" }}>
-                    Categorie
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "#475569" }}>
-                    Fișier Atașat
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "#475569" }}>
-                    Status Curent
-                  </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: 700, color: "#475569" }}
-                    align="center"
-                  >
-                    Acțiuni Flux
-                  </TableCell>
-                </TableRow>
-              </TableHead>
+            <CardContent sx={{ p: 3 }}>
+              <Typography
+                variant="h6"
+                sx={{ mb: 3, fontWeight: 700, color: "#334155" }}
+              >
+                Înregistrare Document Nou
+              </Typography>
 
-              <TableBody>
-                {documents.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      align="center"
-                      sx={{ py: 4, color: "#64748b" }}
+              <form onSubmit={handleSubmit}>
+                <Grid container spacing={3}>
+                  <Grid size={{ xs: 12, md: 7 }}>
+                    <TextField
+                      fullWidth
+                      label="Titlu / Descriere Document"
+                      placeholder="Ex: Cerere adeverință rol agricol..."
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                    />
+                  </Grid>
+
+                  <Grid size={{ xs: 12, md: 5 }}>
+                    <TextField
+                      fullWidth
+                      select
+                      label="Categorie"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
                     >
-                      Nu există documente înregistrate în acest moment.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  documents.map((doc) => (
-                    <TableRow
-                      key={doc.id}
-                      hover
-                      sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+                      {CATEGORII_PRIMARIE.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+
+                  <Grid size={{ xs: 12 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 2,
+                        flexWrap: "wrap",
+                      }}
                     >
-                      <TableCell sx={{ fontWeight: 600, color: "#2563eb" }}>
-                        {doc.number}
-                      </TableCell>
-
-                      <TableCell sx={{ fontWeight: 500, color: "#1e293b" }}>
-                        {doc.title.toUpperCase()}
-                      </TableCell>
-
-                      <TableCell>
-                        <Chip
-                          label={doc.category}
-                          variant="outlined"
-                          size="small"
-                          sx={{ borderColor: "#cbd5e1", color: "#475569" }}
+                      <Button
+                        variant="outlined"
+                        component="label"
+                        color="secondary"
+                        startIcon={<AttachIcon />}
+                        sx={{
+                          textTransform: "none",
+                          fontWeight: 600,
+                          borderRadius: "8px",
+                        }}
+                      >
+                        Alege fișier justificativ
+                        <input
+                          type="file"
+                          hidden
+                          accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.csv"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0)
+                              setSelectedFile(e.target.files[0]); // <--- Am adăugat [0] la final
+                          }}
                         />
-                      </TableCell>
+                      </Button>
+                      {selectedFile && (
+                        <Typography
+                          variant="body2"
+                          sx={{ color: "#059669", fontWeight: 600 }}
+                        >
+                          📎 {selectedFile.name}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Grid>
 
-                      {/* Afișarea fișierului stocat */}
-                      <TableCell>
-                        {doc.file_url ? (
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            color="primary"
-                            startIcon={<ViewIcon />}
-                            href={doc.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            sx={{
-                              textTransform: "none",
-                              borderRadius: "6px",
-                              fontWeight: 600,
-                            }}
-                          >
-                            Vezi Act
-                          </Button>
+                  <Grid size={{ xs: 12 }}>
+                    <Button
+                      type="submit"
+                      disabled={uploading}
+                      variant="contained"
+                      startIcon={
+                        uploading ? (
+                          <CircularProgress size={20} color="inherit" />
                         ) : (
-                          <Typography
-                            variant="caption"
-                            sx={{ color: "#94a3b8", fontStyle: "italic" }}
-                          >
-                            Fără fișier
-                          </Typography>
-                        )}
+                          <AddIcon />
+                        )
+                      }
+                      sx={{
+                        px: 4,
+                        py: 1.5,
+                        borderRadius: "10px",
+                        fontWeight: "bold",
+                        backgroundColor: "#2563eb",
+                      }}
+                    >
+                      {uploading ? "Se trimite..." : "Trimite către Primărie"}
+                    </Button>
+                  </Grid>
+                </Grid>
+              </form>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}{" "}
+      {/* 🔴 ÎNCHIDEM CONDIȚIA AICI (chiar înainte de tabel) */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+      >
+        <Card
+          sx={{
+            borderRadius: "16px",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.03)",
+          }}
+        >
+          <CardContent sx={{ p: 3 }}>
+            <Typography
+              variant="h6"
+              sx={{ mb: 3, fontWeight: 700, color: "#334155" }}
+            >
+              Dosarele Mele / Solicitări depuse
+            </Typography>
+
+            <TableContainer
+              component={Paper}
+              sx={{
+                borderRadius: "12px",
+                boxShadow: "none",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <Table>
+                <TableHead sx={{ backgroundColor: "#f1f5f9" }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 700, color: "#475569" }}>
+                      Număr
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#475569" }}>
+                      Descriere Solicitare
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#475569" }}>
+                      Categorie
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#475569" }}>
+                      Actul Tău
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#475569" }}>
+                      Răspuns Oficial
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#475569" }}>
+                      Status
+                    </TableCell>
+                    {(userRole === "super-admin" ||
+                      userRole === "employee") && (
+                      <TableCell
+                        sx={{ fontWeight: 700, color: "#475569" }}
+                        align="center"
+                      >
+                        Panou Funcționar
                       </TableCell>
+                    )}
+                  </TableRow>
+                </TableHead>
 
-                      <TableCell>{renderStatusChip(doc.status)}</TableCell>
-
-                      <TableCell align="center">
-                        <Box
+                <TableBody>
+                  <AnimatePresence>
+                    {documents.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          align="center"
+                          sx={{ py: 4, color: "#64748b" }}
+                        >
+                          Nu ai depus niciun document până în prezent.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      documents.map((doc, index) => (
+                        <TableRow
+                          key={doc.id}
+                          component={motion.tr}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.3, delay: index * 0.05 }}
+                          hover
                           sx={{
-                            display: "flex",
-                            flexDirection: "row",
-                            gap: "8px",
-                            justifyContent: "center",
+                            "&:last-child td, &:last-child th": { border: 0 },
                           }}
                         >
-                          {doc.status === "registered" && (
-                            <Button
-                              variant="contained"
-                              color="warning"
-                              size="small"
-                              startIcon={<PlayIcon />}
-                              onClick={() =>
-                                handleStatusChange(doc.id, doc.status)
-                              }
-                              sx={{
-                                textTransform: "none",
-                                fontWeight: 600,
-                                borderRadius: "6px",
-                              }}
-                            >
-                              Preia în lucru
-                            </Button>
-                          )}
-
-                          {doc.status === "in_progress" && (
-                            <Button
-                              variant="contained"
-                              color="success"
-                              size="small"
-                              startIcon={<CheckIcon />}
-                              onClick={() =>
-                                handleStatusChange(doc.id, doc.status)
-                              }
-                              sx={{
-                                textTransform: "none",
-                                fontWeight: 600,
-                                borderRadius: "6px",
-                              }}
-                            >
-                              Finalizează
-                            </Button>
-                          )}
-
-                          {doc.status === "completed" && (
+                          <TableCell sx={{ fontWeight: 700, color: "#2563eb" }}>
+                            {doc.number}
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 600, color: "#1e293b" }}>
+                            {doc.title.toUpperCase()}
+                          </TableCell>
+                          <TableCell>
                             <Chip
-                              label="Fără acțiuni"
-                              size="small"
+                              label={doc.category}
                               variant="outlined"
-                              sx={{ color: "#94a3b8", borderColor: "#e2e8f0" }}
+                              size="small"
                             />
+                          </TableCell>
+
+                          <TableCell>
+                            {doc.file_url ? (
+                              <Button
+                                variant="text"
+                                size="small"
+                                startIcon={<ViewIcon />}
+                                href={doc.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                Vezi Cerere
+                              </Button>
+                            ) : (
+                              <Typography
+                                variant="caption"
+                                sx={{ color: "#94a3b8" }}
+                              >
+                                Niciun fișier
+                              </Typography>
+                            )}
+                          </TableCell>
+
+                          <TableCell>
+                            {doc.response_file_url ? (
+                              <Button
+                                variant="contained"
+                                color="success"
+                                size="small"
+                                startIcon={<DownloadIcon />}
+                                href={doc.response_file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{
+                                  textTransform: "none",
+                                  fontWeight: "bold",
+                                  borderRadius: "6px",
+                                  boxShadow: "0 2px 6px rgba(34,197,94,0.3)",
+                                }}
+                              >
+                                Descarcă Act
+                              </Button>
+                            ) : (
+                              <Typography
+                                variant="caption"
+                                sx={{ color: "#94a3b8", fontStyle: "italic" }}
+                              >
+                                În așteptare răspuns...
+                              </Typography>
+                            )}
+                          </TableCell>
+
+                          <TableCell>{renderStatusChip(doc.status)}</TableCell>
+
+                          {(userRole === "super-admin" ||
+                            userRole === "employee") && (
+                            <TableCell align="center">
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "6px",
+                                  alignItems: "center",
+                                }}
+                              >
+                                {doc.status === "registered" && (
+                                  <Button
+                                    variant="contained"
+                                    color="warning"
+                                    size="small"
+                                    startIcon={<PlayIcon />}
+                                    onClick={() => handleStartProgress(doc.id)}
+                                    sx={{
+                                      textTransform: "none",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    Preia în lucru
+                                  </Button>
+                                )}
+
+                                {doc.status === "in_progress" &&
+                                  activeDocId !== doc.id && (
+                                    <Button
+                                      variant="contained"
+                                      color="primary"
+                                      size="small"
+                                      startIcon={<CheckIcon />}
+                                      onClick={() => setActiveDocId(doc.id)}
+                                      sx={{
+                                        textTransform: "none",
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      Finalizează Solicitarea
+                                    </Button>
+                                  )}
+
+                                {activeDocId === doc.id && (
+                                  <Box
+                                    sx={{
+                                      p: 1,
+                                      border: "1px dashed #2563eb",
+                                      borderRadius: "8px",
+                                      backgroundColor: "#eff6ff",
+                                      width: "100%",
+                                      maxWidth: "200px",
+                                    }}
+                                  >
+                                    <Button
+                                      variant="outlined"
+                                      size="small"
+                                      component="label"
+                                      startIcon={<AttachIcon />}
+                                      sx={{
+                                        textTransform: "none",
+                                        mb: 1,
+                                        width: "100%",
+                                      }}
+                                    >
+                                      Pune Răspuns PDF
+                                      <input
+                                        type="file"
+                                        hidden
+                                        accept=".pdf,.jpg,.png"
+                                        onChange={(e) => {
+                                          if (e.target.files && e.target.files)
+                                            setResponseFile(e.target.files[0]);
+                                        }}
+                                      />
+                                    </Button>
+                                    {responseFile && (
+                                      <Typography
+                                        variant="caption"
+                                        sx={{
+                                          display: "block",
+                                          color: "green",
+                                          mb: 1,
+                                        }}
+                                      >
+                                        {responseFile.name}
+                                      </Typography>
+                                    )}
+                                    <Button
+                                      variant="contained"
+                                      color="success"
+                                      size="small"
+                                      onClick={() =>
+                                        handleFinalizeWithFile(doc.id)
+                                      }
+                                      sx={{
+                                        textTransform: "none",
+                                        width: "100%",
+                                      }}
+                                    >
+                                      Trimite la Cetățean
+                                    </Button>
+                                  </Box>
+                                )}
+
+                                {doc.status === "completed" && (
+                                  <Chip
+                                    label="Dosar Închis"
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ color: "#94a3b8" }}
+                                  />
+                                )}
+                              </Box>
+                            </TableCell>
                           )}
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
+                        </TableRow>
+                      ))
+                    )}
+                  </AnimatePresence>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      </motion.div>
     </Box>
   );
 }

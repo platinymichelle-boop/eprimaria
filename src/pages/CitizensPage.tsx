@@ -47,7 +47,6 @@ export default function CitizensPage() {
 
   async function loadRole() {
     const currentRole = await getCurrentUserRole();
-
     setRole(currentRole || "");
   }
 
@@ -58,6 +57,11 @@ export default function CitizensPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (role !== "super-admin" && role !== "employee") {
+      alert("Nu aveți permisiunea de a adăuga cetățeni!");
+      return;
+    }
 
     await createCitizen(formData);
 
@@ -73,6 +77,10 @@ export default function CitizensPage() {
   }
 
   async function handleDelete(id: string) {
+    if (role !== "super-admin" && role !== "employee") {
+      alert("Nu aveți permisiunea de a șterge!");
+      return;
+    }
     await deleteCitizen(id);
     loadCitizens();
   }
@@ -120,24 +128,26 @@ export default function CitizensPage() {
         </Grid>
       </Grid>
 
-      <Box
-        sx={{
-          mb: 4,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <Button
-          variant="contained"
-          size="large"
-          onClick={() => setShowCitizenForm(!showCitizenForm)}
+      {/* Butonul apare doar pentru admini și angajați */}
+      {(role === "super-admin" || role === "employee") && (
+        <Box
+          sx={{
+            mb: 4,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
         >
-          {showCitizenForm ? "Închide Formular" : "+ Adaugă Cetățean"}
-        </Button>
-      </Box>
-
-      {showCitizenForm && (
+          <Button
+            variant="contained"
+            size="large"
+            onClick={() => setShowCitizenForm(!showCitizenForm)}
+          >
+            {showCitizenForm ? "Închide Formular" : "+ Adaugă Cetățean"}
+          </Button>
+        </Box>
+      )}
+      {showCitizenForm && (role === "super-admin" || role === "employee") && (
         <Card
           sx={{
             mb: 4,
@@ -227,6 +237,7 @@ export default function CitizensPage() {
           </CardContent>
         </Card>
       )}
+
       <Card
         sx={{
           borderRadius: 3,
@@ -234,7 +245,9 @@ export default function CitizensPage() {
       >
         <CardContent>
           <Typography variant="h6" sx={{ mb: 3 }}>
-            Listă Cetățeni
+            {role === "super-admin" || role === "employee"
+              ? "Registru General Cetățeni"
+              : "Director Public Localnici"}
           </Typography>
           <Box
             sx={{
@@ -277,21 +290,23 @@ export default function CitizensPage() {
                     Nume
                   </TableCell>
 
-                  <TableCell sx={{ color: "#fff", fontWeight: 700 }}>
-                    CNP
-                  </TableCell>
-
-                  <TableCell sx={{ color: "#fff", fontWeight: 700 }}>
-                    Email
-                  </TableCell>
-
-                  <TableCell sx={{ color: "#fff", fontWeight: 700 }}>
-                    Telefon
-                  </TableCell>
-
-                  <TableCell sx={{ color: "#fff", fontWeight: 700 }}>
-                    Adresă
-                  </TableCell>
+                  {/* Ascundem antetele coloanelor secrete dacă utilizatorul este un cetățean de rând */}
+                  {(role === "super-admin" || role === "employee") && (
+                    <>
+                      <TableCell sx={{ color: "#fff", fontWeight: 700 }}>
+                        CNP
+                      </TableCell>
+                      <TableCell sx={{ color: "#fff", fontWeight: 700 }}>
+                        Email
+                      </TableCell>
+                      <TableCell sx={{ color: "#fff", fontWeight: 700 }}>
+                        Telefon
+                      </TableCell>
+                      <TableCell sx={{ color: "#fff", fontWeight: 700 }}>
+                        Adresă
+                      </TableCell>
+                    </>
+                  )}
 
                   <TableCell sx={{ color: "#fff", fontWeight: 700 }}>
                     Acțiuni
@@ -310,13 +325,15 @@ export default function CitizensPage() {
                     <TableRow key={citizen.id} hover>
                       <TableCell>{citizen.full_name}</TableCell>
 
-                      <TableCell>{citizen.cnp}</TableCell>
-
-                      <TableCell>{citizen.email}</TableCell>
-
-                      <TableCell>{citizen.phone}</TableCell>
-
-                      <TableCell>{citizen.address}</TableCell>
+                      {/* Ascundem datele confidențiale din rânduri pentru utilizatorii de tip cetățean */}
+                      {(role === "super-admin" || role === "employee") && (
+                        <>
+                          <TableCell>{citizen.cnp}</TableCell>
+                          <TableCell>{citizen.email}</TableCell>
+                          <TableCell>{citizen.phone}</TableCell>
+                          <TableCell>{citizen.address}</TableCell>
+                        </>
+                      )}
 
                       <TableCell>
                         {role === "super-admin" && (
@@ -328,6 +345,15 @@ export default function CitizensPage() {
                           >
                             Șterge
                           </Button>
+                        )}
+
+                        {role !== "super-admin" && (
+                          <Typography
+                            variant="caption"
+                            sx={{ color: "#94a3b8", fontStyle: "italic" }}
+                          >
+                            Fără acțiuni
+                          </Typography>
                         )}
                       </TableCell>
                     </TableRow>
