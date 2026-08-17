@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box } from "@mui/material";
+import { Box, useMediaQuery } from "@mui/material"; // Am importat useMediaQuery și aici
 
 import DocumentsPage from "./pages/DocumentsPage";
 import NewspaperTemplate from "./pages/NewspaperTemplate";
@@ -18,12 +18,12 @@ import { getCurrentUser, getProfile } from "./services/authService";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState("dashboard");
-
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
   const [loading, setLoading] = useState(true);
+
+  // Verificăm dacă suntem pe mobil exact ca în Sidebar (sub 900px)
+  const isMobile = useMediaQuery("(max-width:900px)");
 
   useEffect(() => {
     checkAuth();
@@ -79,17 +79,23 @@ export default function App() {
   return (
     <Box
       sx={{
+        // Pe mobil schimbăm direcția în "column" ca să nu mai stea sidebar-ul și pagina lipite pe orizontală
         display: "flex",
+        flexDirection: isMobile ? "column" : "row",
         minHeight: "100vh",
         backgroundColor: "#f8fafc",
       }}
     >
+      {/* Componenta Sidebar modificată anterior */}
       <Sidebar onNavigate={setCurrentPage} />
 
       <Box
         sx={{
           flex: 1,
           overflow: "auto",
+          // Adăugăm un spațiu sus doar pe mobil (p: 3 înseamnă padding)
+          // ca să nu intre textul paginii sub butonul plutitor de meniu
+          pt: isMobile ? "60px" : 0,
         }}
       >
         {currentPage === "dashboard" && <DashboardPage />}
