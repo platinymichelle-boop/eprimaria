@@ -11,7 +11,7 @@ import {
   AdminPanelSettings,
   Newspaper,
   Menu as MenuIcon,
-  Close as CloseIcon, // Am adăugat o pictogramă pentru închidere
+  Close as CloseIcon,
 } from "@mui/icons-material";
 
 import { Drawer, IconButton, useMediaQuery } from "@mui/material";
@@ -52,7 +52,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   function navigate(page: string) {
     onNavigate(page);
     if (isMobile) {
-      setDrawerOpen(false); // Închide automat sidebar-ul după ce apeși pe o pagină
+      setDrawerOpen(false);
     }
   }
 
@@ -77,10 +77,9 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         padding: "20px",
         boxSizing: "border-box",
         borderRight: "1px solid #1e293b",
-        position: "relative", // Necesar pentru a poziționa butonul de "X" pe mobil
+        position: "relative",
       }}
     >
-      {/* Buton de închidere vizibil DOAR pe mobil în interiorul sidebar-ului */}
       {isMobile && (
         <IconButton
           onClick={() => setDrawerOpen(false)}
@@ -99,7 +98,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         style={{
           color: "#ffffff",
           marginBottom: "10px",
-          marginTop: isMobile ? "20px" : "0px", // Spațiu extra pe mobil să nu se suprapună cu butonul X
+          marginTop: isMobile ? "20px" : "0px",
         }}
       >
         ePrimaria
@@ -181,15 +180,21 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         </div>
       )}
 
-      <div onClick={() => navigate("reports")} style={menuItemStyle}>
-        <BarChart />
-        Rapoarte
-      </div>
+      {/* ASCUNS PENTRU CETĂȚENI: Se randează doar dacă e admin sau angajat public */}
+      {(role === "super-admin" || role === "employee") && (
+        <div onClick={() => navigate("reports")} style={menuItemStyle}>
+          <BarChart />
+          Rapoarte
+        </div>
+      )}
 
-      <div onClick={() => navigate("settings")} style={menuItemStyle}>
-        <Settings />
-        Setări
-      </div>
+      {/* ASCUNS PENTRU CETĂȚENI: Se randează doar dacă e admin sau angajat public */}
+      {(role === "super-admin" || role === "employee") && (
+        <div onClick={() => navigate("settings")} style={menuItemStyle}>
+          <Settings />
+          Setări
+        </div>
+      )}
 
       <div
         onClick={async () => {
@@ -211,7 +216,6 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   if (isMobile) {
     return (
       <>
-        {/* Butonul de tip „hamburger” pentru a deschide meniul */}
         <IconButton
           onClick={() => setDrawerOpen(true)}
           sx={{
@@ -230,13 +234,12 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
           <MenuIcon />
         </IconButton>
 
-        {/* Meniul glisant propriu-zis */}
         <Drawer
-          variant="temporary" // Face meniul să apară peste conținut, nu să îl împingă
+          variant="temporary"
           open={drawerOpen}
-          onClose={() => setDrawerOpen(false)} // Închide meniul când apeși în afara lui
+          onClose={() => setDrawerOpen(false)}
           ModalProps={{
-            keepMounted: true, // Îmbunătățește performanța pe mobil
+            keepMounted: true,
           }}
         >
           {sidebarContent}

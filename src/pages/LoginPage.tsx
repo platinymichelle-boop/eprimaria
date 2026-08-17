@@ -8,14 +8,30 @@ export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
 
   const handleSignUp = async () => {
-    const { error } = await signUp(email, password);
+    // 1. Înregistrăm utilizatorul
+    const { data, error } = await signUp(email, password);
+    console.log("Utilizator înregistrat:", data);
 
     if (error) {
       alert(error.message);
       return;
     }
 
-    alert("Cont creat!");
+    alert("Cont creat cu succes! Te conectăm...");
+
+    // 2. Îl conectăm automat ca să nu mai fie nevoie să apese manual pe Login
+    const { error: loginError } = await signIn(email, password);
+
+    if (loginError) {
+      alert(
+        "Contul a fost creat, dar a apărut o eroare la conectare: " +
+          loginError.message,
+      );
+      return;
+    }
+
+    // 3. Reîncărcăm pagina pentru ca App.tsx să citească noul utilizator
+    window.location.reload();
   };
 
   const handleLogin = async () => {
@@ -36,6 +52,7 @@ export default function LoginPage() {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
+        background: "#0f172a", // Am adăugat un fundal închis ca să se vadă frumos textul alb și blur-ul
       }}
     >
       <motion.div
@@ -93,6 +110,7 @@ export default function LoginPage() {
               cursor: "pointer",
               background: isLogin ? "#2563eb" : "#d1d5db",
               color: isLogin ? "white" : "black",
+              fontWeight: "bold",
             }}
           >
             Login
@@ -108,9 +126,10 @@ export default function LoginPage() {
               cursor: "pointer",
               background: !isLogin ? "#2563eb" : "#d1d5db",
               color: !isLogin ? "white" : "black",
+              fontWeight: "bold",
             }}
           >
-            Register
+            Înregistrare
           </button>
         </div>
 
