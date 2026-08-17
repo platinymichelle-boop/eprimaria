@@ -36,7 +36,7 @@ export async function uploadDocumentFile(file: File) {
   const filePath = `acte/${fileName}`;
 
   // Uploadăm fișierul în bucket-ul numit 'documente-primarie'
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from("documente-primarie")
     .upload(filePath, file);
 
