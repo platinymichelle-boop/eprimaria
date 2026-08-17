@@ -11,12 +11,12 @@ import {
   AdminPanelSettings,
   Newspaper,
   Menu as MenuIcon,
+  Close as CloseIcon, // Am adăugat o pictogramă pentru închidere
 } from "@mui/icons-material";
 
 import { Drawer, IconButton, useMediaQuery } from "@mui/material";
 
 import { getCurrentUser, getProfile, signOut } from "../services/authService";
-
 import { getMunicipalityByUser } from "../services/adminService";
 
 type SidebarProps = {
@@ -25,18 +25,8 @@ type SidebarProps = {
 
 export default function Sidebar({ onNavigate }: SidebarProps) {
   const [municipality, setMunicipality] = useState<any>(null);
-
   const [role, setRole] = useState("");
-
   const isMobile = useMediaQuery("(max-width:900px)");
-  console.log(
-  "WIDTH",
-  window.innerWidth,
-  "isMobile",
-  isMobile
-);
-
-
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -51,11 +41,9 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
     if (!user) return;
 
     const { data: profile } = await getProfile(user.id);
-
     setRole(profile?.role || "");
 
     const { data } = await getMunicipalityByUser(user.id);
-
     if (data?.municipalities) {
       setMunicipality(data.municipalities);
     }
@@ -63,9 +51,8 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
 
   function navigate(page: string) {
     onNavigate(page);
-
     if (isMobile) {
-      setDrawerOpen(false);
+      setDrawerOpen(false); // Închide automat sidebar-ul după ce apeși pe o pagină
     }
   }
 
@@ -90,12 +77,29 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         padding: "20px",
         boxSizing: "border-box",
         borderRight: "1px solid #1e293b",
+        position: "relative", // Necesar pentru a poziționa butonul de "X" pe mobil
       }}
     >
+      {/* Buton de închidere vizibil DOAR pe mobil în interiorul sidebar-ului */}
+      {isMobile && (
+        <IconButton
+          onClick={() => setDrawerOpen(false)}
+          sx={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            color: "#94a3b8",
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      )}
+
       <h2
         style={{
           color: "#ffffff",
           marginBottom: "10px",
+          marginTop: isMobile ? "20px" : "0px", // Spațiu extra pe mobil să nu se suprapună cu butonul X
         }}
       >
         ePrimaria
@@ -207,6 +211,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   if (isMobile) {
     return (
       <>
+        {/* Butonul de tip „hamburger” pentru a deschide meniul */}
         <IconButton
           onClick={() => setDrawerOpen(true)}
           sx={{
@@ -214,14 +219,26 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
             top: 10,
             left: 10,
             zIndex: 2000,
-            backgroundColor: "white",
+            backgroundColor: "#0f172a",
+            color: "white",
             boxShadow: 2,
+            "&:hover": {
+              backgroundColor: "#1e293b",
+            },
           }}
         >
           <MenuIcon />
         </IconButton>
 
-        <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+        {/* Meniul glisant propriu-zis */}
+        <Drawer
+          variant="temporary" // Face meniul să apară peste conținut, nu să îl împingă
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)} // Închide meniul când apeși în afara lui
+          ModalProps={{
+            keepMounted: true, // Îmbunătățește performanța pe mobil
+          }}
+        >
           {sidebarContent}
         </Drawer>
       </>
