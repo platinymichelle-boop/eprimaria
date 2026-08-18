@@ -68,10 +68,25 @@ export async function getDocuments() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("municipality_id")
+    .select("role, municipality_id")
     .eq("id", user?.id)
     .single();
+  console.log("USER", user);
+  console.log("PROFILE", profile);
+  console.log("MUNICIPALITY", profile?.municipality_id);
 
+  // Cetățeanul vede doar documentele lui
+  if (profile?.role === "citizen") {
+    return supabase
+      .from("documents")
+      .select("*")
+      .eq("user_id", user?.id)
+      .order("created_at", {
+        ascending: false,
+      });
+  }
+
+  // Funcționar/Admin vede toate documentele primăriei
   return supabase
     .from("documents")
     .select("*")

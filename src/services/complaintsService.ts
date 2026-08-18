@@ -12,6 +12,10 @@ export async function createComplaint(data: {
 }) {
   const municipalityId = await getCurrentMunicipalityId();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return supabase
     .from("complaints")
     .insert({
@@ -22,12 +26,47 @@ export async function createComplaint(data: {
       address: data.address,
       status: "new",
       municipality_id: municipalityId,
+      user_id: user?.id,
     })
     .select();
 }
 
 export async function getComplaints() {
   const municipalityId = await getCurrentMunicipalityId();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user?.id)
+    .single();
+
+  console.log("USER:", user?.email);
+  console.log("ROLE:", profile?.role);
+  console.log("MUNICIPALITY:", municipalityId);
+
+  // CETĂȚEAN
+  if (profile?.role === "citizen") {
+    console.log("CITIZEN FILTER");
+
+    return supabase
+      .from("complaints")
+      .select(
+        `
+        *,
+        complaint_photos (
+          photo_url
+        )
+      `,
+      )
+      .eq("user_id", user?.id)
+      .order("created_at", { ascending: false });
+  }
+
+  console.log("ADMIN FILTER");
 
   return supabase
     .from("complaints")
@@ -36,13 +75,11 @@ export async function getComplaints() {
       *,
       complaint_photos (
         photo_url
-        )
-      `,
+      )
+    `,
     )
     .eq("municipality_id", municipalityId)
-    .order("created_at", {
-      ascending: false,
-    });
+    .order("created_at", { ascending: false });
 }
 
 export async function updateComplaintStatus(id: string, status: string) {

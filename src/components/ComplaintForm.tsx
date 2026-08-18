@@ -75,6 +75,10 @@ export default function ComplaintForm() {
 
     const complaintId = data?.[0]?.id;
 
+    console.log("CREATE DATA", data);
+    console.log("COMPLAINT ID", complaintId);
+    console.log("PHOTOS", photos);
+
     if (complaintId && photos.length > 0) {
       for (const photo of photos) {
         const fileName = `${crypto.randomUUID()}-${photo.name}`;
@@ -92,10 +96,14 @@ export default function ComplaintForm() {
           .from("complaints")
           .getPublicUrl(fileName);
 
-        await supabase.from("complaint_photos").insert({
-          complaint_id: complaintId,
-          photo_url: publicUrlData.publicUrl,
-        });
+        const { error: photoInsertError } = await supabase
+          .from("complaint_photos")
+          .insert({
+            complaint_id: complaintId,
+            photo_url: publicUrlData.publicUrl,
+          });
+
+        console.log("PHOTO INSERT ERROR", photoInsertError);
       }
     }
 
