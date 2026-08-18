@@ -1,68 +1,97 @@
 import { supabase } from "./supabase";
 
-// 1. Creează un document nou și îl leagă de ID-ul cetățeanului logat
+// Creează document nou
 export async function createDocument(
   title: string,
   category: string,
   fileUrl?: string,
 ) {
-  // Generăm un număr unic automat pentru registratură
   const documentNumber = `REG-${Math.floor(100000 + Math.random() * 900000)}`;
 
-  // Preluăm informațiile despre utilizatorul curent din sesiunea Supabase
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("municipality_id")
+    .eq("id", user?.id)
+    .single();
+
   return supabase.from("documents").insert([
     {
       number: documentNumber,
-      title: title,
-      category: category,
+      title,
+      category,
       status: "registered",
-      file_url: fileUrl || null, // Se salvează link-ul dacă utilizatorul a încărcat ceva
-      user_id: user?.id || null, // Adăugăm ID-ul unicat al cetățeanului logat
+      file_url: fileUrl || null,
+      user_id: user?.id || null,
+      municipality_id: profile?.municipality_id,
       created_at: new Date().toISOString(),
     },
   ]);
 }
 
-// 2. Încarcă fișierul fizic (PDF, Excel, Poze, CSV) în Supabase Storage (Bucket)
+// Upload fișier
 export async function uploadDocumentFile(file: File) {
-  // Extragem extensia fișierului (.pdf, .xlsx, .png etc.)
   const fileExt = file.name.split(".").pop();
-  // Generăm un nume unic unic bazat pe timp ca să nu se suprascrie documentele între ele
-  const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+  const fileName = `${Date.now()}-${Math.random()
+    .toString(36)
+    .substring(2, 7)}.${fileExt}`;
+
   const filePath = `acte/${fileName}`;
 
-  // Uploadăm fișierul în bucket-ul numit 'documente-primarie'
   const { error } = await supabase.storage
     .from("documente-primarie")
     .upload(filePath, file);
 
-  if (error) return { fileUrl: null, error };
+  if (error) {
+    return { fileUrl: null, error };
+  }
 
-  // Dacă încărcarea a reușit, preluăm link-ul public direct către el
   const { data: publicUrlData } = supabase.storage
     .from("documente-primarie")
     .getPublicUrl(filePath);
 
-  return { fileUrl: publicUrlData.publicUrl, error: null };
+  return {
+    fileUrl: publicUrlData.publicUrl,
+    error: null,
+  };
 }
 
-// 3. Preia toate documentele ordonate cronologic (cele mai noi primele)
+// Încarcă doar documentele primăriei utilizatorului
 export async function getDocuments() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("municipality_id")
+    .eq("id", user?.id)
+    .single();
+
   return supabase
     .from("documents")
     .select("*")
-    .order("created_at", { ascending: false });
+    .eq("municipality_id", profile?.municipality_id)
+    .order("created_at", {
+      ascending: false,
+    });
 }
 
-// 4. Actualizează statusul unui document pe parcursul fluxului administrativ
+// Schimbă status
 export async function updateDocumentStatus(id: string, nextStatus: string) {
-  return supabase.from("documents").update({ status: nextStatus }).eq("id", id);
+  return supabase
+    .from("documents")
+    .update({
+      status: nextStatus,
+    })
+    .eq("id", id);
 }
-// 5. Funcție prin care funcționarul încarcă răspunsul oficial și finalizează documentul
+
+// Finalizare document
 export async function finalizeDocumentWithResponse(
   id: string,
   responseUrl: string,

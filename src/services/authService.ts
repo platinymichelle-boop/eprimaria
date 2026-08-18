@@ -1,10 +1,19 @@
 import { supabase } from "./supabase";
 
 // Funcția de înregistrare simplificată (Supabase se ocupă automat de profil în spate)
-export async function signUp(email: string, password: string) {
+export async function signUp(
+  email: string,
+  password: string,
+  municipalityId: string,
+) {
   return supabase.auth.signUp({
     email,
     password,
+    options: {
+      data: {
+        municipality_id: municipalityId,
+      },
+    },
   });
 }
 

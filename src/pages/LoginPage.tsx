@@ -1,36 +1,61 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { signUp, signIn } from "../services/authService";
+import { supabase } from "../services/supabase";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(true);
 
+  const [county, setCounty] = useState("");
+  const [municipalityId, setMunicipalityId] = useState("");
+
+  const [counties, setCounties] = useState<string[]>([]);
+  const [municipalities, setMunicipalities] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadMunicipalities();
+  }, []);
+
+  async function loadMunicipalities() {
+    const { data, error } = await supabase
+      .from("municipalities")
+      .select("*")
+      .order("county");
+
+    console.log("DATA:", data);
+    console.log("ERROR:", error);
+
+    if (!data) return;
+
+    setMunicipalities(data);
+
+    const uniqueCounties = [...new Set(data.map((x) => x.county))].sort();
+
+    setCounties(uniqueCounties as string[]);
+  }
+
   const handleSignUp = async () => {
-    // 1. Înregistrăm utilizatorul
-    const { data, error } = await signUp(email, password);
-    console.log("Utilizator înregistrat:", data);
+    if (!municipalityId) {
+      alert("Selectează localitatea.");
+      return;
+    }
+
+    const { error } = await signUp(email, password, municipalityId);
 
     if (error) {
       alert(error.message);
       return;
     }
 
-    alert("Cont creat cu succes! Te conectăm...");
-
-    // 2. Îl conectăm automat ca să nu mai fie nevoie să apese manual pe Login
     const { error: loginError } = await signIn(email, password);
 
     if (loginError) {
-      alert(
-        "Contul a fost creat, dar a apărut o eroare la conectare: " +
-          loginError.message,
-      );
+      alert(loginError.message);
       return;
     }
 
-    // 3. Reîncărcăm pagina pentru ca App.tsx să citească noul utilizator
     window.location.reload();
   };
 
@@ -52,7 +77,7 @@ export default function LoginPage() {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        background: "#0f172a", // Am adăugat un fundal închis ca să se vadă frumos textul alb și blur-ul
+        background: "#0f172a",
       }}
     >
       <motion.div
@@ -68,10 +93,7 @@ export default function LoginPage() {
           boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
         }}
       >
-        <motion.h1
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
+        <h1
           style={{
             color: "white",
             textAlign: "center",
@@ -80,13 +102,12 @@ export default function LoginPage() {
           }}
         >
           ePrimaria
-        </motion.h1>
+        </h1>
 
         <p
           style={{
             textAlign: "center",
             color: "#dbeafe",
-            marginTop: 0,
             marginBottom: "30px",
           }}
         >
@@ -109,8 +130,6 @@ export default function LoginPage() {
               border: "none",
               cursor: "pointer",
               background: isLogin ? "#2563eb" : "#d1d5db",
-              color: isLogin ? "white" : "black",
-              fontWeight: "bold",
             }}
           >
             Login
@@ -125,8 +144,6 @@ export default function LoginPage() {
               border: "none",
               cursor: "pointer",
               background: !isLogin ? "#2563eb" : "#d1d5db",
-              color: !isLogin ? "white" : "black",
-              fontWeight: "bold",
             }}
           >
             Înregistrare
@@ -144,7 +161,6 @@ export default function LoginPage() {
             borderRadius: "15px",
             border: "none",
             marginBottom: "15px",
-            fontSize: "18px",
             boxSizing: "border-box",
           }}
         />
@@ -159,22 +175,65 @@ export default function LoginPage() {
             padding: "18px",
             borderRadius: "15px",
             border: "none",
-            marginBottom: "20px",
-            fontSize: "18px",
+            marginBottom: "15px",
             boxSizing: "border-box",
           }}
         />
 
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
+        {!isLogin && (
+          <>
+            <select
+              value={county}
+              onChange={(e) => {
+                setCounty(e.target.value);
+                setMunicipalityId("");
+              }}
+              style={{
+                width: "100%",
+                padding: "18px",
+                borderRadius: "15px",
+                marginBottom: "15px",
+              }}
+            >
+              <option value="">Selectează județul</option>
+
+              {counties.map((county) => (
+                <option key={county} value={county}>
+                  {county}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={municipalityId}
+              onChange={(e) => setMunicipalityId(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "18px",
+                borderRadius: "15px",
+                marginBottom: "15px",
+              }}
+            >
+              <option value="">Selectează localitatea</option>
+
+              {municipalities
+                .filter((m) => m.county === county)
+                .map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+            </select>
+          </>
+        )}
+
+        <button
           onClick={isLogin ? handleLogin : handleSignUp}
           style={{
             width: "100%",
             padding: "18px",
             borderRadius: "15px",
             border: "none",
-            fontSize: "20px",
             cursor: "pointer",
             background: "#2563eb",
             color: "white",
@@ -182,7 +241,7 @@ export default function LoginPage() {
           }}
         >
           {isLogin ? "Conectare" : "Creează cont"}
-        </motion.button>
+        </button>
       </motion.div>
     </div>
   );

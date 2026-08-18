@@ -17,6 +17,8 @@ export default function NewspaperTemplate() {
 
   async function loadData() {
     try {
+
+      
       const { data: settingsData } = await supabase
         .from("newspaper_settings")
         .select("*")
